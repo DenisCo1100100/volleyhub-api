@@ -1,0 +1,22 @@
+name: volleyhub
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: volleyhub-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: volleyhub
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:
+    name: volleyhub-postgres-data
