@@ -7,9 +7,9 @@ namespace VolleyHub.Domain.Courts
 {
     public sealed class Court : AuditableEntity
     {
-        private const int MaxNameLength = 150;
-        private const int MaxAddressLength = 500;
-        private const int MaxDescriptionLength = 2000;
+        public const int MaxNameLength = 150;
+        public const int MaxAddressLength = 500;
+        public const int MaxDescriptionLength = 2000;
 
         private Court() { }
 
