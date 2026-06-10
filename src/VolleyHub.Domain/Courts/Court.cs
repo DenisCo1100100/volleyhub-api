@@ -89,8 +89,8 @@ namespace VolleyHub.Domain.Courts
             ValidateCoordinates(latitude, longitude);
             ValidateDescription(description);
 
-            Name = NormolizeRequiredText(name);
-            Address = NormolizeRequiredText(address);
+            Name = NormalizeRequiredText(name);
+            Address = NormalizeRequiredText(address);
             Latitude = latitude;
             Longitude = longitude;
             SurfaceType = surfaceType;
@@ -111,6 +111,9 @@ namespace VolleyHub.Domain.Courts
         {
             if (string.IsNullOrWhiteSpace(address))
                 throw new ArgumentNullException("Court address is required.", nameof(address));
+
+            if (address.Length > MaxAddressLength)
+                throw new ArgumentException("Court address must be 500 characters or less.", nameof(address));
         }
 
         private static void ValidateCoordinates(double latitude, double longitude)
@@ -128,7 +131,7 @@ namespace VolleyHub.Domain.Courts
                 throw new ArgumentException($"Court description must be {MaxDescriptionLength} characters or less.", nameof(description));
         }
 
-        private static string NormolizeRequiredText(string value)
+        private static string NormalizeRequiredText(string value)
         {
             return value.Trim();
         }

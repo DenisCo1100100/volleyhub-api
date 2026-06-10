@@ -17,7 +17,7 @@ namespace VolleyHub.Application.Courts.Mappings
                 court.IsIndoor,
                 court.Description,
                 court.CreatedAt,
-                court.UpdateAt);
+                court.UpdatedAt);
         }
     }
 }

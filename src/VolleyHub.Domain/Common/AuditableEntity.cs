@@ -5,7 +5,7 @@ namespace VolleyHub.Domain.Common
     public abstract class AuditableEntity
     {
         public DateTimeOffset CreatedAt { get; protected set; }
-        public DateTimeOffset? UpdateAt { get; protected set; }
+        public DateTimeOffset? UpdatedAt { get; protected set; }
 
         public void MarkCreated(DateTimeOffset now)
         {
@@ -14,7 +14,7 @@ namespace VolleyHub.Domain.Common
 
         public void MarkUpdated(DateTimeOffset now)
         {
-            UpdateAt = now;
+            UpdatedAt = now;
         }
     }
 }
