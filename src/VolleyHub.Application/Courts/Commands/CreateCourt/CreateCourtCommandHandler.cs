@@ -8,20 +8,17 @@ namespace VolleyHub.Application.Courts.Commands.CreateCourt
     {
         private readonly ICourtRepository _courtRepository;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IDateTimeProvider _dateTimeProvider;
 
         public CreateCourtCommandHandler(
-            ICourtRepository courtRepository, 
-            IUnitOfWork unitOfWork, 
-            IDateTimeProvider dateTimeProvider)
+            ICourtRepository courtRepository,
+            IUnitOfWork unitOfWork)
         {
             _courtRepository = courtRepository;
             _unitOfWork = unitOfWork;
-            _dateTimeProvider = dateTimeProvider;
         }
 
         public async Task<Guid> Handle(
-            CreateCourtCommand request, 
+            CreateCourtCommand request,
             CancellationToken cancellationToken)
         {
             var court = Court.Create(
@@ -33,10 +30,7 @@ namespace VolleyHub.Application.Courts.Commands.CreateCourt
                 request.IsIndoor,
                 request.Description);
 
-            court.MarkCreated(_dateTimeProvider.UtcNow);
-
             await _courtRepository.AddAsync(court, cancellationToken);
-
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return court.Id;

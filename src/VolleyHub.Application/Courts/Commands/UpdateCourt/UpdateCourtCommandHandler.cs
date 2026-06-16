@@ -1,26 +1,24 @@
 ﻿using MediatR;
 using VolleyHub.Application.Common.Exceptions;
 using VolleyHub.Application.Common.Interfaces;
+using VolleyHub.Domain.Courts;
 
 namespace VolleyHub.Application.Courts.Commands.UpdateCourt
 {
-    public sealed class UpdateCourtCommandHandler : IRequestHandler<UpdateCourtCommand, Unit>
+    public sealed class UpdateCourtCommandHandler : IRequestHandler<UpdateCourtCommand>
     {
         private readonly ICourtRepository _courtRepository;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IDateTimeProvider _dateTimeProvider;
 
         public UpdateCourtCommandHandler(
             ICourtRepository courtRepository,
-            IUnitOfWork unitOfWork,
-            IDateTimeProvider dateTimeProvider)
+            IUnitOfWork unitOfWork)
         {
             _courtRepository = courtRepository;
             _unitOfWork = unitOfWork;
-            _dateTimeProvider = dateTimeProvider;
         }
 
-        public async Task<Unit> Handle(
+        public async Task Handle(
             UpdateCourtCommand request,
             CancellationToken cancellationToken)
         {
@@ -28,8 +26,10 @@ namespace VolleyHub.Application.Courts.Commands.UpdateCourt
                 request.Id,
                 cancellationToken);
 
-            if(court == null)
-                throw new NotFoundException(nameof(court), request.Id);
+            if (court is null)
+            {
+                throw new NotFoundException(nameof(Court), request.Id);
+            }
 
             court.Update(
                 request.Name,
@@ -40,13 +40,9 @@ namespace VolleyHub.Application.Courts.Commands.UpdateCourt
                 request.IsIndoor,
                 request.Description);
 
-            court.MarkCreated(_dateTimeProvider.UtcNow);
-
             _courtRepository.Update(court);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            return Unit.Value;
         }
     }
 }

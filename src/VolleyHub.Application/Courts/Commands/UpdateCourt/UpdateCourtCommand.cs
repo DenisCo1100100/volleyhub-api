@@ -11,5 +11,5 @@ namespace VolleyHub.Application.Courts.Commands.UpdateCourt
         double Longitude,
         CourtSurfaceType SurfaceType,
         bool IsIndoor,
-        string? Description) : IRequest<Unit>;
+        string? Description) : IRequest;
 }
