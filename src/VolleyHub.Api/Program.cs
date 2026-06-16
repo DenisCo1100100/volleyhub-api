@@ -1,3 +1,4 @@
+using VolleyHub.Api.ExceptionHandling;
 using VolleyHub.Application;
 using VolleyHub.Infrastructure;
 
@@ -11,7 +12,12 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
