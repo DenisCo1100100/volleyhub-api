@@ -5,4 +5,8 @@
     <Project Path="src/VolleyHub.Domain/VolleyHub.Domain.csproj" />
     <Project Path="src/VolleyHub.Infrastructure/VolleyHub.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/VolleyHub.Application.UnitTests/VolleyHub.Application.UnitTests.csproj" />
+    <Project Path="tests/VolleyHub.Domain.UnitTests/VolleyHub.Domain.UnitTests.csproj" />
+  </Folder>
 </Solution>
