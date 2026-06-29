@@ -58,7 +58,10 @@ namespace VolleyHub.Api.Controllers
         {
             if (id != command.Id)
             {
-                return BadRequest("Route id and body id must be the same.");
+                return Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    title: "Bad request",
+                    detail: "Route id and body id must be the same.");
             }
 
             await _sender.Send(command, cancellationToken);
