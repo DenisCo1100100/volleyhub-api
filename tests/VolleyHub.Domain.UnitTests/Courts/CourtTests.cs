@@ -178,6 +178,66 @@ namespace VolleyHub.Domain.UnitTests.Courts
         }
 
         [Fact]
+        public void Create_ShouldThrowArgumentException_WhenNameIsTooLong()
+        {
+            // Arrange
+            var name = new string('a', Court.MaxNameLength + 1);
+
+            // Act
+            Action act = () => Court.Create(
+                name: name,
+                address: "Kyiv, Hydropark",
+                latitude: 50.4547,
+                longitude: 30.5861,
+                surfaceType: CourtSurfaceType.Sand,
+                isIndoor: false,
+                description: null);
+
+            // Assert
+            act.Should().Throw<ArgumentException>();
+        }
+
+        [Fact]
+        public void Create_ShouldThrowArgumentException_WhenAddressIsTooLong()
+        {
+            // Arrange
+            var address = new string('a', Court.MaxAddressLength + 1);
+
+            // Act
+            Action act = () => Court.Create(
+                name: "Central Beach Court",
+                address: address,
+                latitude: 50.4547,
+                longitude: 30.5861,
+                surfaceType: CourtSurfaceType.Sand,
+                isIndoor: false,
+                description: null);
+
+            // Assert
+            act.Should().Throw<ArgumentException>();
+        }
+
+        [Fact]
+        public void Create_ShouldThrowArgumentException_WhenDescriptionIsTooLong()
+        {
+            // Arrange
+            var description = new string('a', Court.MaxDescriptionLength + 1);
+
+            // Act
+            Action act = () => Court.Create(
+                name: "Central Beach Court",
+                address: "Kyiv, Hydropark",
+                latitude: 50.4547,
+                longitude: 30.5861,
+                surfaceType: CourtSurfaceType.Sand,
+                isIndoor: false,
+                description: description);
+
+            // Assert
+            act.Should().Throw<ArgumentException>();
+        }
+
+        [Fact]
         public void Delete_ShouldMarkCourtAsDeleted()
         {
             // Arrange
