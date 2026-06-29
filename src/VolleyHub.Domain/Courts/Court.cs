@@ -101,7 +101,7 @@ namespace VolleyHub.Domain.Courts
         private static void ValidateName(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentNullException("Court name is required.", nameof(name));
+                throw new ArgumentNullException(nameof(name), "Court name is required.");
 
             if (name.Length > MaxNameLength)
                 throw new ArgumentException("Court name must be 150 characters or less.", nameof(name));
@@ -110,7 +110,7 @@ namespace VolleyHub.Domain.Courts
         private static void ValidateAddress(string address)
         {
             if (string.IsNullOrWhiteSpace(address))
-                throw new ArgumentNullException("Court address is required.", nameof(address));
+                throw new ArgumentNullException(nameof(address), "Court address is required.");
 
             if (address.Length > MaxAddressLength)
                 throw new ArgumentException("Court address must be 500 characters or less.", nameof(address));
