@@ -18,7 +18,7 @@ namespace VolleyHub.Infrastructure.Persistence.Repositories
             CancellationToken cancellationToken)
         {
             return await _context.Courts
-                .FirstOrDefaultAsync(court => court.Id == id, cancellationToken);
+                .FirstOrDefaultAsync(court => court.Id == id && !court.IsDeleted, cancellationToken);
         }
 
         public async Task<IReadOnlyList<Court>> GetListAsync(
@@ -26,6 +26,7 @@ namespace VolleyHub.Infrastructure.Persistence.Repositories
         {
             return await _context.Courts
                 .AsNoTracking()
+                .Where(court => !court.IsDeleted)
                 .OrderBy(court => court.Name)
                 .ToListAsync(cancellationToken);
         }
