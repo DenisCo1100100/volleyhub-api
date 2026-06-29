@@ -119,10 +119,10 @@ namespace VolleyHub.Domain.Courts
         private static void ValidateCoordinates(double latitude, double longitude)
         {
             if (latitude is < -90 or > 90)
-                throw new ArgumentException("Latitude must be betwen -90 and 90.", nameof(latitude));
+                throw new ArgumentException("Latitude must be between -90 and 90.", nameof(latitude));
 
             if (longitude is < -180 or > 180)
-                throw new ArgumentException("Longitude must be betwen -180 and 180.", nameof(longitude));
+                throw new ArgumentException("Longitude must be between -180 and 180.", nameof(longitude));
         }
 
         private static void ValidateDescription(string? description)
