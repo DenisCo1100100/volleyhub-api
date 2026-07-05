@@ -672,3 +672,28 @@ These questions are not blockers for the first version, but should be clarified 
 8. Should organizers be able to ban players from their games?
 9. Should community courts be moderated before becoming public?
 10. Should venue verification be manual by admin?
+
+### Keep future sports expansion possible
+
+The first MVP is focused on volleyball, but the core model should not be unnecessarily locked to volleyball-only concepts.
+
+VolleyHub should be built as a volleyball-first product, not as a volleyball-only system.
+
+Core concepts such as users, organizers, venues, courts, games, participants, reservations, attendance, and reliability should stay generic enough to support other sports in the future.
+
+Volleyball-specific concepts should only be added when they are required for the MVP or clearly justified by the current feature.
+
+Avoid adding volleyball-specific names or rules into shared domain models when a more generic concept would work.
+
+Examples:
+
+* prefer `Game` over `VolleyballGame`;
+* prefer `Participant` over `VolleyballPlayer`;
+* prefer configurable player limits over hardcoded volleyball-only limits;
+* avoid putting volleyball positions directly into the generic player profile;
+* avoid designing courts in a way that only volleyball courts can be represented.
+
+This does not mean that the MVP must support multiple sports now.
+
+It only means that early technical decisions should not make future support for football, basketball, or other sports unnecessarily difficult.
+
