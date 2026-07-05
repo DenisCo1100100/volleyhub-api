@@ -2,6 +2,7 @@
 using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Domain.Common;
 using VolleyHub.Domain.Courts;
+using VolleyHub.Domain.Games;
 
 namespace VolleyHub.Infrastructure.Persistence
 {
@@ -18,6 +19,7 @@ namespace VolleyHub.Infrastructure.Persistence
         }
 
         public DbSet<Court> Courts => Set<Court>();
+        public DbSet<Game> Games => Set<Game>();
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
