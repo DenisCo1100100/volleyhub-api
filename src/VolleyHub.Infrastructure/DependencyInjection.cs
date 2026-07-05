@@ -28,6 +28,7 @@ namespace VolleyHub.Infrastructure
             });
 
             services.AddScoped<ICourtRepository, CourtRepository>();
+            services.AddScoped<IGameRepository, GameRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 
