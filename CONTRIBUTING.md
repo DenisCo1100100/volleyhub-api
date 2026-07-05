@@ -211,3 +211,34 @@ Check:
 * Files changed are expected.
 * No unrelated formatting changes.
 * No architecture rule is broken.
+
+## Sports extensibility rule
+
+VolleyHub MVP is volleyball-first, but shared domain code should not be hardcoded as volleyball-only unless the feature explicitly requires it.
+
+When adding or changing shared domain models, avoid unnecessary volleyball-specific naming and rules.
+
+Prefer generic names for shared concepts:
+
+* `Game`, not `VolleyballGame`;
+* `Participant`, not `VolleyballPlayer`;
+* `Court` or another generic place concept, not a volleyball-only place model;
+* configurable limits and formats instead of hardcoded volleyball-only limits.
+
+Volleyball-specific concepts may be introduced later, but they should be isolated from the shared core when possible.
+
+Good:
+
+* common game lifecycle;
+* common participant flow;
+* common attendance tracking;
+* common venue and reservation flow.
+
+Be careful with:
+
+* sport-specific positions;
+* sport-specific scoring;
+* sport-specific team formats;
+* hardcoded player limits;
+* volleyball-only validation inside shared entities.
+
