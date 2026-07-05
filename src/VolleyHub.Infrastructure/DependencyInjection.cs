@@ -28,6 +28,9 @@ namespace VolleyHub.Infrastructure
                 options.UseNpgsql(connectionString);
             });
 
+            services.Configure<JwtOptions>(
+                configuration.GetSection(JwtOptions.SectionName));
+
             services.AddScoped<ICourtRepository, CourtRepository>();
             services.AddScoped<IGameRepository, GameRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
