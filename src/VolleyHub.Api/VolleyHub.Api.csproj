@@ -20,8 +20,4 @@
     <ProjectReference Include="..\VolleyHub.Infrastructure\VolleyHub.Infrastructure.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Controllers\" />
-  </ItemGroup>
-
 </Project>
