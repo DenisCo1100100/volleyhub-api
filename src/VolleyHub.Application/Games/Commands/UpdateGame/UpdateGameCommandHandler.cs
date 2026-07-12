@@ -32,9 +32,14 @@ namespace VolleyHub.Application.Games.Commands.UpdateGame
             }
 
             game.UpdateDetails(
+                request.OrganizerId,
                 request.CourtId,
                 request.StartsAt,
+                request.EndsAt,
                 request.MaxPlayers,
+                request.PricePerPlayer,
+                request.RequiredLevel,
+                request.JoinPolicy,
                 request.Description);
 
             _gameRepository.Update(game);

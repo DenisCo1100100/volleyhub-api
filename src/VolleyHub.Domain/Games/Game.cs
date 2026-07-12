@@ -1,5 +1,4 @@
-﻿using System;
-using VolleyHub.Domain.Common;
+﻿using VolleyHub.Domain.Common;
 
 namespace VolleyHub.Domain.Games
 {
@@ -17,83 +16,162 @@ namespace VolleyHub.Domain.Games
         }
 
         public Guid Id { get; private set; }
+        public Guid OrganizerId { get; private set; }
         public Guid CourtId { get; private set; }
         public DateTimeOffset StartsAt { get; private set; }
+        public DateTimeOffset? EndsAt { get; private set; }
         public int MaxPlayers { get; private set; }
+        public decimal PricePerPlayer { get; private set; }
+        public GameLevel RequiredLevel { get; private set; }
+        public GameJoinPolicy JoinPolicy { get; private set; }
         public string? Description { get; private set; }
         public GameStatus Status { get; private set; }
 
         public static Game Create(
+            Guid organizerId,
             Guid courtId,
             DateTimeOffset startsAt,
+            DateTimeOffset? endsAt,
             int maxPlayers,
+            decimal pricePerPlayer,
+            GameLevel requiredLevel,
+            GameJoinPolicy joinPolicy,
             string? description)
         {
             var game = new Game(Guid.NewGuid())
             {
-                Status = GameStatus.Scheduled
+                Status = GameStatus.Open
             };
 
             game.ApplyDetails(
+                organizerId,
                 courtId,
                 startsAt,
+                endsAt,
                 maxPlayers,
+                pricePerPlayer,
+                requiredLevel,
+                joinPolicy,
                 description);
 
             return game;
         }
 
         public void UpdateDetails(
+            Guid organizerId,
             Guid courtId,
             DateTimeOffset startsAt,
+            DateTimeOffset? endsAt,
             int maxPlayers,
+            decimal pricePerPlayer,
+            GameLevel requiredLevel,
+            GameJoinPolicy joinPolicy,
             string? description)
         {
-            EnsureScheduled();
+            EnsureCanBeChanged();
 
             ApplyDetails(
+                organizerId,
                 courtId,
                 startsAt,
+                endsAt,
                 maxPlayers,
+                pricePerPlayer,
+                requiredLevel,
+                joinPolicy,
                 description);
+        }
+
+        public void MarkAsFull()
+        {
+            if (Status is not GameStatus.Open)
+            {
+                throw new InvalidOperationException("Only open games can be marked as full.");
+            }
+
+            Status = GameStatus.Full;
+        }
+
+        public void Reopen()
+        {
+            if (Status is not GameStatus.Full)
+            {
+                throw new InvalidOperationException("Only full games can be reopened.");
+            }
+
+            Status = GameStatus.Open;
         }
 
         public void Cancel()
         {
-            EnsureScheduled();
+            if (Status is GameStatus.Cancelled)
+            {
+                throw new InvalidOperationException("Game is already cancelled.");
+            }
+
+            if (Status is GameStatus.Completed)
+            {
+                throw new InvalidOperationException("Completed games cannot be cancelled.");
+            }
 
             Status = GameStatus.Cancelled;
         }
 
         public void Complete()
         {
-            EnsureScheduled();
+            if (Status is not GameStatus.Open and not GameStatus.Full)
+            {
+                throw new InvalidOperationException("Only open or full games can be completed.");
+            }
 
             Status = GameStatus.Completed;
         }
 
         private void ApplyDetails(
+            Guid organizerId,
             Guid courtId,
             DateTimeOffset startsAt,
+            DateTimeOffset? endsAt,
             int maxPlayers,
+            decimal pricePerPlayer,
+            GameLevel requiredLevel,
+            GameJoinPolicy joinPolicy,
             string? description)
         {
+            ValidateOrganizerId(organizerId);
             ValidateCourtId(courtId);
             ValidateStartsAt(startsAt);
+            ValidateEndsAt(startsAt, endsAt);
             ValidateMaxPlayers(maxPlayers);
+            ValidatePricePerPlayer(pricePerPlayer);
+            ValidateRequiredLevel(requiredLevel);
+            ValidateJoinPolicy(joinPolicy);
             ValidateDescription(description);
 
+            OrganizerId = organizerId;
             CourtId = courtId;
             StartsAt = startsAt;
+            EndsAt = endsAt;
             MaxPlayers = maxPlayers;
+            PricePerPlayer = pricePerPlayer;
+            RequiredLevel = requiredLevel;
+            JoinPolicy = joinPolicy;
             Description = NormalizeOptionalText(description);
         }
 
-        private void EnsureScheduled()
+        private void EnsureCanBeChanged()
         {
-            if (Status is not GameStatus.Scheduled)
+            if (Status is not GameStatus.Draft and not GameStatus.Open)
             {
-                throw new InvalidOperationException("Only scheduled games can be changed.");
+                throw new InvalidOperationException("Only draft or open games can be changed.");
+            }
+        }
+
+        private static void ValidateOrganizerId(Guid organizerId)
+        {
+            if (organizerId == Guid.Empty)
+            {
+                throw new ArgumentException("Organizer id is required.", nameof(organizerId));
             }
         }
 
@@ -113,6 +191,16 @@ namespace VolleyHub.Domain.Games
             }
         }
 
+        private static void ValidateEndsAt(
+            DateTimeOffset startsAt,
+            DateTimeOffset? endsAt)
+        {
+            if (endsAt is not null && endsAt <= startsAt)
+            {
+                throw new ArgumentException("Game end date and time must be after start date and time.", nameof(endsAt));
+            }
+        }
+
         private static void ValidateMaxPlayers(int maxPlayers)
         {
             if (maxPlayers is < MinPlayers or > MaxPlayersLimit)
@@ -120,6 +208,30 @@ namespace VolleyHub.Domain.Games
                 throw new ArgumentException(
                     $"Max players must be between {MinPlayers} and {MaxPlayersLimit}.",
                     nameof(maxPlayers));
+            }
+        }
+
+        private static void ValidatePricePerPlayer(decimal pricePerPlayer)
+        {
+            if (pricePerPlayer < 0)
+            {
+                throw new ArgumentException("Price per player cannot be negative.", nameof(pricePerPlayer));
+            }
+        }
+
+        private static void ValidateRequiredLevel(GameLevel requiredLevel)
+        {
+            if (requiredLevel is GameLevel.Unknown || !Enum.IsDefined(requiredLevel))
+            {
+                throw new ArgumentException("Game level is invalid.", nameof(requiredLevel));
+            }
+        }
+
+        private static void ValidateJoinPolicy(GameJoinPolicy joinPolicy)
+        {
+            if (joinPolicy is GameJoinPolicy.Unknown || !Enum.IsDefined(joinPolicy))
+            {
+                throw new ArgumentException("Game join policy is invalid.", nameof(joinPolicy));
             }
         }
 

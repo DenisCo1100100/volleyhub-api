@@ -15,6 +15,10 @@ namespace VolleyHub.Infrastructure.Persistence.Configurations
             builder.Property(game => game.Id)
                 .HasColumnName("id");
 
+            builder.Property(game => game.OrganizerId)
+                .HasColumnName("organizer_id")
+                .IsRequired();
+
             builder.Property(game => game.CourtId)
                 .HasColumnName("court_id")
                 .IsRequired();
@@ -23,8 +27,28 @@ namespace VolleyHub.Infrastructure.Persistence.Configurations
                 .HasColumnName("starts_at")
                 .IsRequired();
 
+            builder.Property(game => game.EndsAt)
+                .HasColumnName("ends_at");
+
             builder.Property(game => game.MaxPlayers)
                 .HasColumnName("max_players")
+                .IsRequired();
+
+            builder.Property(game => game.PricePerPlayer)
+                .HasColumnName("price_per_player")
+                .HasPrecision(18, 2)
+                .IsRequired();
+
+            builder.Property(game => game.RequiredLevel)
+                .HasColumnName("required_level")
+                .HasConversion<string>()
+                .HasMaxLength(50)
+                .IsRequired();
+
+            builder.Property(game => game.JoinPolicy)
+                .HasColumnName("join_policy")
+                .HasConversion<string>()
+                .HasMaxLength(50)
                 .IsRequired();
 
             builder.Property(game => game.Description)
@@ -44,9 +68,12 @@ namespace VolleyHub.Infrastructure.Persistence.Configurations
             builder.Property(game => game.UpdatedAt)
                 .HasColumnName("updated_at");
 
+            builder.HasIndex(game => game.OrganizerId);
             builder.HasIndex(game => game.CourtId);
             builder.HasIndex(game => game.StartsAt);
             builder.HasIndex(game => game.Status);
+            builder.HasIndex(game => game.RequiredLevel);
+            builder.HasIndex(game => game.JoinPolicy);
         }
     }
 }

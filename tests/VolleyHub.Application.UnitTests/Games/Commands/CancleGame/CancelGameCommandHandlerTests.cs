@@ -104,10 +104,17 @@ namespace VolleyHub.Application.UnitTests.Games.Commands.CancelGame
 
         private static Game CreateGame()
         {
+            var startsAt = DateTimeOffset.UtcNow.AddDays(1);
+
             return Game.Create(
+                organizerId: Guid.NewGuid(),
                 courtId: Guid.NewGuid(),
-                startsAt: DateTimeOffset.UtcNow.AddDays(1),
+                startsAt: startsAt,
+                endsAt: startsAt.AddHours(2),
                 maxPlayers: 12,
+                pricePerPlayer: 15,
+                requiredLevel: GameLevel.Intermediate,
+                joinPolicy: GameJoinPolicy.ApprovalRequired,
                 description: "Evening volleyball game");
         }
     }

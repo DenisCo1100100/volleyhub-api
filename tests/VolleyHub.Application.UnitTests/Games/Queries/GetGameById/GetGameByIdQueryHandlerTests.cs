@@ -32,9 +32,14 @@ namespace VolleyHub.Application.UnitTests.Games.Queries.GetGameById
 
             // Assert
             result.Id.Should().Be(game.Id);
+            result.OrganizerId.Should().Be(game.OrganizerId);
             result.CourtId.Should().Be(game.CourtId);
             result.StartsAt.Should().Be(game.StartsAt);
+            result.EndsAt.Should().Be(game.EndsAt);
             result.MaxPlayers.Should().Be(game.MaxPlayers);
+            result.PricePerPlayer.Should().Be(game.PricePerPlayer);
+            result.RequiredLevel.Should().Be(game.RequiredLevel);
+            result.JoinPolicy.Should().Be(game.JoinPolicy);
             result.Description.Should().Be(game.Description);
             result.Status.Should().Be(game.Status);
 
@@ -78,10 +83,17 @@ namespace VolleyHub.Application.UnitTests.Games.Queries.GetGameById
 
         private static Game CreateGame()
         {
+            var startsAt = DateTimeOffset.UtcNow.AddDays(1);
+
             return Game.Create(
+                organizerId: Guid.NewGuid(),
                 courtId: Guid.NewGuid(),
-                startsAt: DateTimeOffset.UtcNow.AddDays(1),
+                startsAt: startsAt,
+                endsAt: startsAt.AddHours(2),
                 maxPlayers: 12,
+                pricePerPlayer: 15,
+                requiredLevel: GameLevel.Intermediate,
+                joinPolicy: GameJoinPolicy.ApprovalRequired,
                 description: "Evening volleyball game");
         }
     }

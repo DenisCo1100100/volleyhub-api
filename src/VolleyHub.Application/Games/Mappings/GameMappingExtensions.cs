@@ -9,9 +9,14 @@ namespace VolleyHub.Application.Games.Mappings
         {
             return new GameDto(
                 game.Id,
+                game.OrganizerId,
                 game.CourtId,
                 game.StartsAt,
+                game.EndsAt,
                 game.MaxPlayers,
+                game.PricePerPlayer,
+                game.RequiredLevel,
+                game.JoinPolicy,
                 game.Description,
                 game.Status,
                 game.CreatedAt,
