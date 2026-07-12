@@ -10,14 +10,32 @@ namespace VolleyHub.Application.Games.Commands.UpdateGame
             RuleFor(command => command.Id)
                 .NotEmpty();
 
+            RuleFor(command => command.OrganizerId)
+                .NotEmpty();
+
             RuleFor(command => command.CourtId)
                 .NotEmpty();
 
             RuleFor(command => command.StartsAt)
                 .NotEmpty();
 
+            RuleFor(command => command.EndsAt)
+                .GreaterThan(command => command.StartsAt)
+                .When(command => command.EndsAt is not null);
+
             RuleFor(command => command.MaxPlayers)
                 .InclusiveBetween(Game.MinPlayers, Game.MaxPlayersLimit);
+
+            RuleFor(command => command.PricePerPlayer)
+                .GreaterThanOrEqualTo(0);
+
+            RuleFor(command => command.RequiredLevel)
+                .Must(level => level is not GameLevel.Unknown && Enum.IsDefined(level))
+                .WithMessage("Game level is invalid.");
+
+            RuleFor(command => command.JoinPolicy)
+                .Must(policy => policy is not GameJoinPolicy.Unknown && Enum.IsDefined(policy))
+                .WithMessage("Game join policy is invalid.");
 
             RuleFor(command => command.Description)
                 .MaximumLength(Game.MaxDescriptionLength);

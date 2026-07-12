@@ -2,8 +2,10 @@
 {
     public enum GameStatus
     {
-        Scheduled = 1,
-        Cancelled = 2,
-        Completed = 3
+        Draft = 1,
+        Open = 2,
+        Full = 3,
+        Cancelled = 4,
+        Completed = 5
     }
 }

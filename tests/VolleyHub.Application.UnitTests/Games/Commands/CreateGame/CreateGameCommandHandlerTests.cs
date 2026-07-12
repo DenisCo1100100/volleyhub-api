@@ -33,10 +33,18 @@ namespace VolleyHub.Application.UnitTests.Games.Commands.CreateGame
                 gameRepositoryMock.Object,
                 unitOfWorkMock.Object);
 
+            var startsAt = DateTimeOffset.UtcNow.AddDays(1);
+            var endsAt = startsAt.AddHours(2);
+
             var command = new CreateGameCommand(
+                OrganizerId: Guid.NewGuid(),
                 CourtId: Guid.NewGuid(),
-                StartsAt: DateTimeOffset.UtcNow.AddDays(1),
+                StartsAt: startsAt,
+                EndsAt: endsAt,
                 MaxPlayers: 12,
+                PricePerPlayer: 15,
+                RequiredLevel: GameLevel.Intermediate,
+                JoinPolicy: GameJoinPolicy.ApprovalRequired,
                 Description: "Evening volleyball game");
 
             // Act
@@ -47,11 +55,16 @@ namespace VolleyHub.Application.UnitTests.Games.Commands.CreateGame
 
             addedGame.Should().NotBeNull();
             addedGame!.Id.Should().Be(gameId);
+            addedGame.OrganizerId.Should().Be(command.OrganizerId);
             addedGame.CourtId.Should().Be(command.CourtId);
             addedGame.StartsAt.Should().Be(command.StartsAt);
+            addedGame.EndsAt.Should().Be(command.EndsAt);
             addedGame.MaxPlayers.Should().Be(command.MaxPlayers);
+            addedGame.PricePerPlayer.Should().Be(command.PricePerPlayer);
+            addedGame.RequiredLevel.Should().Be(command.RequiredLevel);
+            addedGame.JoinPolicy.Should().Be(command.JoinPolicy);
             addedGame.Description.Should().Be(command.Description);
-            addedGame.Status.Should().Be(GameStatus.Scheduled);
+            addedGame.Status.Should().Be(GameStatus.Open);
 
             gameRepositoryMock.Verify(
                 repository => repository.AddAsync(

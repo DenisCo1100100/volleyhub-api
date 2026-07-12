@@ -22,9 +22,14 @@ namespace VolleyHub.Application.Games.Commands.CreateGame
             CancellationToken cancellationToken)
         {
             var game = Game.Create(
+                request.OrganizerId,
                 request.CourtId,
                 request.StartsAt,
+                request.EndsAt,
                 request.MaxPlayers,
+                request.PricePerPlayer,
+                request.RequiredLevel,
+                request.JoinPolicy,
                 request.Description);
 
             await _gameRepository.AddAsync(game, cancellationToken);
