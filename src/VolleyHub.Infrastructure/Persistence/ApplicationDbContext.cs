@@ -21,6 +21,7 @@ namespace VolleyHub.Infrastructure.Persistence
 
         public DbSet<Court> Courts => Set<Court>();
         public DbSet<Game> Games => Set<Game>();
+        public DbSet<GameParticipant> GameParticipants => Set<GameParticipant>();
         public DbSet<User> Users => Set<User>();
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
