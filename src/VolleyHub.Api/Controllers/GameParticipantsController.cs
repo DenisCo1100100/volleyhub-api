@@ -6,6 +6,8 @@ using VolleyHub.Application.GameParticipants.Commands.LeaveGame;
 using VolleyHub.Application.GameParticipants.Commands.RejectParticipant;
 using VolleyHub.Application.GameParticipants.Commands.RemoveParticipant;
 using VolleyHub.Application.GameParticipants.Queries.GetGameParticipants;
+using VolleyHub.Application.GameParticipants.Commands.MarkParticipantAttendance;
+using VolleyHub.Domain.Games;
 
 namespace VolleyHub.Api.Controllers
 {
@@ -74,6 +76,21 @@ namespace VolleyHub.Api.Controllers
             return NoContent();
         }
 
+        [HttpPost("game-participants/{participantId:guid}/attendance")]
+        public async Task<IActionResult> MarkParticipantAttendance(
+            Guid participantId,
+            MarkParticipantAttendanceRequest request,
+            CancellationToken cancellationToken)
+        {
+            await _sender.Send(
+                new MarkParticipantAttendanceCommand(
+                    participantId,
+                    request.AttendanceStatus),
+                cancellationToken);
+
+            return NoContent();
+        }
+
         [HttpPost("games/{gameId:guid}/participants/leave")]
         public async Task<IActionResult> LeaveGame(
             Guid gameId,
@@ -104,5 +121,7 @@ namespace VolleyHub.Api.Controllers
         public sealed record JoinGameRequest(Guid PlayerProfileId);
 
         public sealed record LeaveGameRequest(Guid PlayerProfileId);
+
+        public sealed record MarkParticipantAttendanceRequest(GameParticipantAttendanceStatus AttendanceStatus);
     }
 }
