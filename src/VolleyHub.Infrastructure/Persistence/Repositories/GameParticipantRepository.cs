@@ -44,6 +44,17 @@ namespace VolleyHub.Infrastructure.Persistence.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<IReadOnlyList<GameParticipant>> GetByPlayerProfileIdAsync(
+            Guid playerProfileId,
+            CancellationToken cancellationToken)
+        {
+            return await _context.GameParticipants
+                .AsNoTracking()
+                .Where(participant => participant.PlayerProfileId == playerProfileId)
+                .OrderByDescending(participant => participant.JoinedAt)
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task AddAsync(
             GameParticipant participant,
             CancellationToken cancellationToken)

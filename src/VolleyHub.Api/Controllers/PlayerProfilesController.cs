@@ -5,6 +5,7 @@ using VolleyHub.Application.PlayerProfiles.Commands.DeletePlayerProfile;
 using VolleyHub.Application.PlayerProfiles.Commands.UpdatePlayerProfile;
 using VolleyHub.Application.PlayerProfiles.Queries.GetPlayerProfileById;
 using VolleyHub.Application.PlayerProfiles.Queries.GetPlayerProfiles;
+using VolleyHub.Application.PlayerProfiles.Queries.GetPlayerReliabilitySummary;
 
 namespace VolleyHub.Api.Controllers
 {
@@ -39,6 +40,18 @@ namespace VolleyHub.Api.Controllers
                 cancellationToken);
 
             return Ok(playerProfile);
+        }
+
+        [HttpGet("{id:guid}/reliability")]
+        public async Task<IActionResult> GetPlayerReliabilitySummary(
+            Guid id,
+            CancellationToken cancellationToken)
+        {
+            var reliabilitySummary = await _sender.Send(
+                new GetPlayerReliabilitySummaryQuery(id),
+                cancellationToken);
+
+            return Ok(reliabilitySummary);
         }
 
         [HttpPost]
