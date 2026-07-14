@@ -17,6 +17,10 @@ namespace VolleyHub.Application.Common.Interfaces
             Guid gameId,
             CancellationToken cancellationToken);
 
+        Task<IReadOnlyList<GameParticipant>> GetByPlayerProfileIdAsync(
+            Guid playerProfileId,
+            CancellationToken cancellationToken);
+
         Task AddAsync(
             GameParticipant participant,
             CancellationToken cancellationToken);
