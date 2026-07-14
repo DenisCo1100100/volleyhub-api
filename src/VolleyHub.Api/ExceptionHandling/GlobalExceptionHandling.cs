@@ -51,6 +51,24 @@ namespace VolleyHub.Api.ExceptionHandling
                 ValidationException validationException =>
                     CreateValidationProblemDetails(httpContext, validationException),
 
+                UnauthorizedException unauthorizedException =>
+                    new ProblemDetails
+                    {
+                        Status = StatusCodes.Status401Unauthorized,
+                        Title = "Unauthorized",
+                        Detail = unauthorizedException.Message,
+                        Instance = httpContext.Request.Path
+                    },
+
+                ForbiddenAccessException forbiddenAccessException =>
+                    new ProblemDetails
+                    {
+                        Status = StatusCodes.Status403Forbidden,
+                        Title = "Forbidden",
+                        Detail = forbiddenAccessException.Message,
+                        Instance = httpContext.Request.Path
+                    },
+
                 NotFoundException notFoundException =>
                     new ProblemDetails
                     {
