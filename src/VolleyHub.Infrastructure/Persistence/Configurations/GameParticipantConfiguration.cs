@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using VolleyHub.Domain.Games;
+using VolleyHub.Domain.PlayerProfiles;
 
 namespace VolleyHub.Infrastructure.Persistence.Configurations
 {
@@ -59,6 +60,11 @@ namespace VolleyHub.Infrastructure.Persistence.Configurations
                 .WithMany()
                 .HasForeignKey(participant => participant.GameId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne<PlayerProfile>()
+                .WithMany()
+                .HasForeignKey(participant => participant.PlayerProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasIndex(participant => participant.GameId);
 
