@@ -12,7 +12,6 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.CreatePlayerPr
         public void Validate_ShouldNotHaveValidationErrors_WhenCommandIsValid()
         {
             var command = new CreatePlayerProfileCommand(
-                UserId: Guid.NewGuid(),
                 DisplayName: "John Player",
                 SkillLevel: PlayerSkillLevel.Intermediate,
                 City: "Amsterdam",
@@ -24,25 +23,9 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.CreatePlayerPr
         }
 
         [Fact]
-        public void Validate_ShouldHaveValidationError_WhenUserIdIsEmpty()
-        {
-            var command = new CreatePlayerProfileCommand(
-                UserId: Guid.Empty,
-                DisplayName: "John Player",
-                SkillLevel: PlayerSkillLevel.Intermediate,
-                City: "Amsterdam",
-                Bio: "I like volleyball.");
-
-            var result = _validator.TestValidate(command);
-
-            result.ShouldHaveValidationErrorFor(command => command.UserId);
-        }
-
-        [Fact]
         public void Validate_ShouldHaveValidationError_WhenDisplayNameIsEmpty()
         {
             var command = new CreatePlayerProfileCommand(
-                UserId: Guid.NewGuid(),
                 DisplayName: string.Empty,
                 SkillLevel: PlayerSkillLevel.Intermediate,
                 City: "Amsterdam",
@@ -57,7 +40,6 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.CreatePlayerPr
         public void Validate_ShouldHaveValidationError_WhenDisplayNameIsTooLong()
         {
             var command = new CreatePlayerProfileCommand(
-                UserId: Guid.NewGuid(),
                 DisplayName: new string('a', PlayerProfile.MaxDisplayNameLength + 1),
                 SkillLevel: PlayerSkillLevel.Intermediate,
                 City: "Amsterdam",
@@ -74,7 +56,6 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.CreatePlayerPr
         public void Validate_ShouldHaveValidationError_WhenSkillLevelIsInvalid(PlayerSkillLevel skillLevel)
         {
             var command = new CreatePlayerProfileCommand(
-                UserId: Guid.NewGuid(),
                 DisplayName: "John Player",
                 SkillLevel: skillLevel,
                 City: "Amsterdam",
@@ -89,7 +70,6 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.CreatePlayerPr
         public void Validate_ShouldHaveValidationError_WhenCityIsTooLong()
         {
             var command = new CreatePlayerProfileCommand(
-                UserId: Guid.NewGuid(),
                 DisplayName: "John Player",
                 SkillLevel: PlayerSkillLevel.Intermediate,
                 City: new string('a', PlayerProfile.MaxCityLength + 1),
@@ -104,7 +84,6 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.CreatePlayerPr
         public void Validate_ShouldHaveValidationError_WhenBioIsTooLong()
         {
             var command = new CreatePlayerProfileCommand(
-                UserId: Guid.NewGuid(),
                 DisplayName: "John Player",
                 SkillLevel: PlayerSkillLevel.Intermediate,
                 City: "Amsterdam",

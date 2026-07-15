@@ -7,9 +7,6 @@ namespace VolleyHub.Application.PlayerProfiles.Commands.CreatePlayerProfile
     {
         public CreatePlayerProfileCommandValidator()
         {
-            RuleFor(command => command.UserId)
-                .NotEmpty();
-
             RuleFor(command => command.DisplayName)
                 .NotEmpty()
                 .MaximumLength(PlayerProfile.MaxDisplayNameLength);

@@ -10,14 +10,19 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.DeletePlayerPr
     public sealed class DeletePlayerProfileCommandHandlerTests
     {
         [Fact]
-        public async Task Handle_ShouldDeletePlayerProfileAndSaveChanges_WhenProfileExists()
+        public async Task Handle_ShouldDeletePlayerProfileAndSaveChanges_WhenCurrentUserOwnsProfile()
         {
             var playerProfile = CreatePlayerProfile();
 
             var command = new DeletePlayerProfileCommand(playerProfile.Id);
 
             var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
             var unitOfWorkMock = new Mock<IUnitOfWork>();
+
+            currentUserServiceMock
+                .Setup(service => service.UserId)
+                .Returns(playerProfile.UserId);
 
             playerProfileRepositoryMock
                 .Setup(repository => repository.GetByIdAsync(
@@ -31,6 +36,7 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.DeletePlayerPr
 
             var handler = new DeletePlayerProfileCommandHandler(
                 playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
                 unitOfWorkMock.Object);
 
             await handler.Handle(command, CancellationToken.None);
@@ -47,12 +53,94 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.DeletePlayerPr
         }
 
         [Fact]
-        public async Task Handle_ShouldThrowNotFoundException_WhenProfileDoesNotExist()
+        public async Task Handle_ShouldThrowUnauthorizedException_WhenCurrentUserDoesNotExist()
         {
             var command = new DeletePlayerProfileCommand(Guid.NewGuid());
 
             var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
             var unitOfWorkMock = new Mock<IUnitOfWork>();
+
+            currentUserServiceMock
+                .Setup(service => service.UserId)
+                .Returns((Guid?)null);
+
+            var handler = new DeletePlayerProfileCommandHandler(
+                playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
+                unitOfWorkMock.Object);
+
+            Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
+
+            await act.Should().ThrowAsync<UnauthorizedException>();
+
+            playerProfileRepositoryMock.Verify(
+                repository => repository.GetByIdAsync(
+                    It.IsAny<Guid>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Never);
+
+            playerProfileRepositoryMock.Verify(
+                repository => repository.Update(It.IsAny<PlayerProfile>()),
+                Times.Never);
+
+            unitOfWorkMock.Verify(
+                unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task Handle_ShouldThrowForbiddenAccessException_WhenCurrentUserDoesNotOwnProfile()
+        {
+            var playerProfile = CreatePlayerProfile();
+
+            var command = new DeletePlayerProfileCommand(playerProfile.Id);
+
+            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
+            var unitOfWorkMock = new Mock<IUnitOfWork>();
+
+            currentUserServiceMock
+                .Setup(service => service.UserId)
+                .Returns(Guid.NewGuid());
+
+            playerProfileRepositoryMock
+                .Setup(repository => repository.GetByIdAsync(
+                    command.Id,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(playerProfile);
+
+            var handler = new DeletePlayerProfileCommandHandler(
+                playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
+                unitOfWorkMock.Object);
+
+            Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
+
+            await act.Should().ThrowAsync<ForbiddenAccessException>();
+
+            playerProfileRepositoryMock.Verify(
+                repository => repository.Update(It.IsAny<PlayerProfile>()),
+                Times.Never);
+
+            unitOfWorkMock.Verify(
+                unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task Handle_ShouldThrowNotFoundException_WhenProfileDoesNotExist()
+        {
+            var currentUserId = Guid.NewGuid();
+            var command = new DeletePlayerProfileCommand(Guid.NewGuid());
+
+            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
+            var unitOfWorkMock = new Mock<IUnitOfWork>();
+
+            currentUserServiceMock
+                .Setup(service => service.UserId)
+                .Returns(currentUserId);
 
             playerProfileRepositoryMock
                 .Setup(repository => repository.GetByIdAsync(
@@ -62,6 +150,7 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.DeletePlayerPr
 
             var handler = new DeletePlayerProfileCommandHandler(
                 playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
                 unitOfWorkMock.Object);
 
             Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
@@ -86,7 +175,12 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.DeletePlayerPr
             var command = new DeletePlayerProfileCommand(playerProfile.Id);
 
             var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
             var unitOfWorkMock = new Mock<IUnitOfWork>();
+
+            currentUserServiceMock
+                .Setup(service => service.UserId)
+                .Returns(playerProfile.UserId);
 
             playerProfileRepositoryMock
                 .Setup(repository => repository.GetByIdAsync(
@@ -96,6 +190,7 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.DeletePlayerPr
 
             var handler = new DeletePlayerProfileCommandHandler(
                 playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
                 unitOfWorkMock.Object);
 
             Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);

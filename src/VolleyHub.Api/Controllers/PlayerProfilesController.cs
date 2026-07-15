@@ -6,6 +6,8 @@ using VolleyHub.Application.PlayerProfiles.Commands.UpdatePlayerProfile;
 using VolleyHub.Application.PlayerProfiles.Queries.GetPlayerProfileById;
 using VolleyHub.Application.PlayerProfiles.Queries.GetPlayerProfiles;
 using VolleyHub.Application.PlayerProfiles.Queries.GetPlayerReliabilitySummary;
+using Microsoft.AspNetCore.Authorization;
+using VolleyHub.Domain.PlayerProfiles;
 
 namespace VolleyHub.Api.Controllers
 {
@@ -54,12 +56,19 @@ namespace VolleyHub.Api.Controllers
             return Ok(reliabilitySummary);
         }
 
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> CreatePlayerProfile(
-            CreatePlayerProfileCommand command,
+            CreatePlayerProfileRequest request,
             CancellationToken cancellationToken)
         {
-            var playerProfileId = await _sender.Send(command, cancellationToken);
+            var playerProfileId = await _sender.Send(
+                new CreatePlayerProfileCommand(
+                    request.DisplayName,
+                    request.SkillLevel,
+                    request.City,
+                    request.Bio),
+                cancellationToken);
 
             return CreatedAtAction(
                 nameof(GetPlayerProfileById),
@@ -67,25 +76,26 @@ namespace VolleyHub.Api.Controllers
                 playerProfileId);
         }
 
+        [Authorize]
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> UpdatePlayerProfile(
             Guid id,
-            UpdatePlayerProfileCommand command,
+            UpdatePlayerProfileRequest request,
             CancellationToken cancellationToken)
         {
-            if (id != command.Id)
-            {
-                return Problem(
-                    statusCode: StatusCodes.Status400BadRequest,
-                    title: "Bad request",
-                    detail: "Route id and body id must be the same.");
-            }
-
-            await _sender.Send(command, cancellationToken);
+            await _sender.Send(
+                new UpdatePlayerProfileCommand(
+                    id,
+                    request.DisplayName,
+                    request.SkillLevel,
+                    request.City,
+                    request.Bio),
+                cancellationToken);
 
             return NoContent();
         }
 
+        [Authorize]
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> DeletePlayerProfile(
             Guid id,
@@ -98,4 +108,16 @@ namespace VolleyHub.Api.Controllers
             return NoContent();
         }
     }
+
+    public sealed record CreatePlayerProfileRequest(
+        string DisplayName,
+        PlayerSkillLevel SkillLevel,
+        string? City,
+        string? Bio);
+
+    public sealed record UpdatePlayerProfileRequest(
+        string DisplayName,
+        PlayerSkillLevel SkillLevel,
+        string? City,
+        string? Bio);
 }
