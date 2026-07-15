@@ -6,6 +6,8 @@ using VolleyHub.Application.Games.Commands.CreateGame;
 using VolleyHub.Application.Games.Commands.UpdateGame;
 using VolleyHub.Application.Games.Queries.GetGameById;
 using VolleyHub.Application.Games.Queries.GetGames;
+using Microsoft.AspNetCore.Authorization;
+using VolleyHub.Domain.Games;
 
 namespace VolleyHub.Api.Controllers
 {
@@ -38,12 +40,23 @@ namespace VolleyHub.Api.Controllers
             return Ok(game);
         }
 
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> CreateGame(
-            CreateGameCommand command,
+            CreateGameRequest request,
             CancellationToken cancellationToken)
         {
-            var gameId = await _sender.Send(command, cancellationToken);
+            var gameId = await _sender.Send(
+                new CreateGameCommand(
+                    request.CourtId,
+                    request.StartsAt,
+                    request.EndsAt,
+                    request.MaxPlayers,
+                    request.PricePerPlayer,
+                    request.RequiredLevel,
+                    request.JoinPolicy,
+                    request.Description),
+                cancellationToken);
 
             return CreatedAtAction(
                 nameof(GetGameById),
@@ -51,25 +64,30 @@ namespace VolleyHub.Api.Controllers
                 gameId);
         }
 
+        [Authorize]
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> UpdateGame(
             Guid id,
-            UpdateGameCommand command,
+            UpdateGameRequest request,
             CancellationToken cancellationToken)
         {
-            if (id != command.Id)
-            {
-                return Problem(
-                    statusCode: StatusCodes.Status400BadRequest,
-                    title: "Bad request",
-                    detail: "Route id and body id must be the same.");
-            }
-
-            await _sender.Send(command, cancellationToken);
+            await _sender.Send(
+                new UpdateGameCommand(
+                    id,
+                    request.CourtId,
+                    request.StartsAt,
+                    request.EndsAt,
+                    request.MaxPlayers,
+                    request.PricePerPlayer,
+                    request.RequiredLevel,
+                    request.JoinPolicy,
+                    request.Description),
+                cancellationToken);
 
             return NoContent();
         }
 
+        [Authorize]
         [HttpPost("{id:guid}/cancel")]
         public async Task<IActionResult> CancelGame(
             Guid id,
@@ -80,6 +98,7 @@ namespace VolleyHub.Api.Controllers
             return NoContent();
         }
 
+        [Authorize]
         [HttpPost("{id:guid}/complete")]
         public async Task<IActionResult> CompleteGame(
             Guid id,
@@ -90,4 +109,24 @@ namespace VolleyHub.Api.Controllers
             return NoContent();
         }
     }
+
+    public sealed record CreateGameRequest(
+        Guid CourtId,
+        DateTimeOffset StartsAt,
+        DateTimeOffset? EndsAt,
+        int MaxPlayers,
+        decimal PricePerPlayer,
+        GameLevel RequiredLevel,
+        GameJoinPolicy JoinPolicy,
+        string? Description);
+
+    public sealed record UpdateGameRequest(
+        Guid CourtId,
+        DateTimeOffset StartsAt,
+        DateTimeOffset? EndsAt,
+        int MaxPlayers,
+        decimal PricePerPlayer,
+        GameLevel RequiredLevel,
+        GameJoinPolicy JoinPolicy,
+        string? Description);
 }
