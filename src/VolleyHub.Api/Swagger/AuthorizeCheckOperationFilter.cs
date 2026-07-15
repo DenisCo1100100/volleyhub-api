@@ -31,6 +31,8 @@ namespace VolleyHub.Api.Swagger
                 return;
             }
 
+            operation.Responses ??= new OpenApiResponses();
+
             operation.Responses.TryAdd(
                 StatusCodes.Status401Unauthorized.ToString(),
                 new OpenApiResponse { Description = "Unauthorized" });

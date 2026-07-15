@@ -10,7 +10,7 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.UpdatePlayerPr
     public sealed class UpdatePlayerProfileCommandHandlerTests
     {
         [Fact]
-        public async Task Handle_ShouldUpdatePlayerProfileAndSaveChanges_WhenProfileExists()
+        public async Task Handle_ShouldUpdatePlayerProfileAndSaveChanges_WhenCurrentUserOwnsProfile()
         {
             var playerProfile = CreatePlayerProfile();
 
@@ -22,7 +22,12 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.UpdatePlayerPr
                 Bio: "Updated bio.");
 
             var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
             var unitOfWorkMock = new Mock<IUnitOfWork>();
+
+            currentUserServiceMock
+                .Setup(service => service.UserId)
+                .Returns(playerProfile.UserId);
 
             playerProfileRepositoryMock
                 .Setup(repository => repository.GetByIdAsync(
@@ -36,6 +41,7 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.UpdatePlayerPr
 
             var handler = new UpdatePlayerProfileCommandHandler(
                 playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
                 unitOfWorkMock.Object);
 
             await handler.Handle(command, CancellationToken.None);
@@ -55,7 +61,7 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.UpdatePlayerPr
         }
 
         [Fact]
-        public async Task Handle_ShouldThrowNotFoundException_WhenProfileDoesNotExist()
+        public async Task Handle_ShouldThrowUnauthorizedException_WhenCurrentUserDoesNotExist()
         {
             var command = new UpdatePlayerProfileCommand(
                 Id: Guid.NewGuid(),
@@ -65,7 +71,100 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.UpdatePlayerPr
                 Bio: "Updated bio.");
 
             var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
             var unitOfWorkMock = new Mock<IUnitOfWork>();
+
+            currentUserServiceMock
+                .Setup(service => service.UserId)
+                .Returns((Guid?)null);
+
+            var handler = new UpdatePlayerProfileCommandHandler(
+                playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
+                unitOfWorkMock.Object);
+
+            Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
+
+            await act.Should().ThrowAsync<UnauthorizedException>();
+
+            playerProfileRepositoryMock.Verify(
+                repository => repository.GetByIdAsync(
+                    It.IsAny<Guid>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Never);
+
+            playerProfileRepositoryMock.Verify(
+                repository => repository.Update(It.IsAny<PlayerProfile>()),
+                Times.Never);
+
+            unitOfWorkMock.Verify(
+                unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task Handle_ShouldThrowForbiddenAccessException_WhenCurrentUserDoesNotOwnProfile()
+        {
+            var playerProfile = CreatePlayerProfile();
+
+            var command = new UpdatePlayerProfileCommand(
+                Id: playerProfile.Id,
+                DisplayName: "Updated Player",
+                SkillLevel: PlayerSkillLevel.Advanced,
+                City: "Rotterdam",
+                Bio: "Updated bio.");
+
+            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
+            var unitOfWorkMock = new Mock<IUnitOfWork>();
+
+            currentUserServiceMock
+                .Setup(service => service.UserId)
+                .Returns(Guid.NewGuid());
+
+            playerProfileRepositoryMock
+                .Setup(repository => repository.GetByIdAsync(
+                    command.Id,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(playerProfile);
+
+            var handler = new UpdatePlayerProfileCommandHandler(
+                playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
+                unitOfWorkMock.Object);
+
+            Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
+
+            await act.Should().ThrowAsync<ForbiddenAccessException>();
+
+            playerProfileRepositoryMock.Verify(
+                repository => repository.Update(It.IsAny<PlayerProfile>()),
+                Times.Never);
+
+            unitOfWorkMock.Verify(
+                unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task Handle_ShouldThrowNotFoundException_WhenProfileDoesNotExist()
+        {
+            var currentUserId = Guid.NewGuid();
+
+            var command = new UpdatePlayerProfileCommand(
+                Id: Guid.NewGuid(),
+                DisplayName: "Updated Player",
+                SkillLevel: PlayerSkillLevel.Advanced,
+                City: "Rotterdam",
+                Bio: "Updated bio.");
+
+            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
+            var unitOfWorkMock = new Mock<IUnitOfWork>();
+
+            currentUserServiceMock
+                .Setup(service => service.UserId)
+                .Returns(currentUserId);
 
             playerProfileRepositoryMock
                 .Setup(repository => repository.GetByIdAsync(
@@ -75,6 +174,7 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.UpdatePlayerPr
 
             var handler = new UpdatePlayerProfileCommandHandler(
                 playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
                 unitOfWorkMock.Object);
 
             Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
@@ -104,7 +204,12 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.UpdatePlayerPr
                 Bio: "Updated bio.");
 
             var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
             var unitOfWorkMock = new Mock<IUnitOfWork>();
+
+            currentUserServiceMock
+                .Setup(service => service.UserId)
+                .Returns(playerProfile.UserId);
 
             playerProfileRepositoryMock
                 .Setup(repository => repository.GetByIdAsync(
@@ -114,6 +219,7 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.UpdatePlayerPr
 
             var handler = new UpdatePlayerProfileCommandHandler(
                 playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
                 unitOfWorkMock.Object);
 
             Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
