@@ -5,7 +5,6 @@ namespace VolleyHub.Application.Games.Commands.UpdateGame
 {
     public sealed record UpdateGameCommand(
         Guid Id,
-        Guid OrganizerId,
         Guid CourtId,
         DateTimeOffset StartsAt,
         DateTimeOffset? EndsAt,

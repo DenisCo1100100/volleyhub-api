@@ -2,19 +2,26 @@
 using VolleyHub.Application.Common.Exceptions;
 using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Domain.Games;
+using VolleyHub.Domain.PlayerProfiles;
 
 namespace VolleyHub.Application.Games.Commands.UpdateGame
 {
     public sealed class UpdateGameCommandHandler : IRequestHandler<UpdateGameCommand>
     {
         private readonly IGameRepository _gameRepository;
+        private readonly IPlayerProfileRepository _playerProfileRepository;
+        private readonly ICurrentUserService _currentUserService;
         private readonly IUnitOfWork _unitOfWork;
 
         public UpdateGameCommandHandler(
             IGameRepository gameRepository,
+            IPlayerProfileRepository playerProfileRepository,
+            ICurrentUserService currentUserService,
             IUnitOfWork unitOfWork)
         {
             _gameRepository = gameRepository;
+            _playerProfileRepository = playerProfileRepository;
+            _currentUserService = currentUserService;
             _unitOfWork = unitOfWork;
         }
 
@@ -22,6 +29,22 @@ namespace VolleyHub.Application.Games.Commands.UpdateGame
             UpdateGameCommand request,
             CancellationToken cancellationToken)
         {
+            var currentUserId = _currentUserService.UserId;
+
+            if (currentUserId is null)
+            {
+                throw new UnauthorizedException();
+            }
+
+            var organizerProfile = await _playerProfileRepository.GetByUserIdAsync(
+                currentUserId.Value,
+                cancellationToken);
+
+            if (organizerProfile is null || organizerProfile.IsDeleted)
+            {
+                throw new NotFoundException(nameof(PlayerProfile), currentUserId.Value);
+            }
+
             var game = await _gameRepository.GetByIdAsync(
                 request.Id,
                 cancellationToken);
@@ -31,8 +54,13 @@ namespace VolleyHub.Application.Games.Commands.UpdateGame
                 throw new NotFoundException(nameof(Game), request.Id);
             }
 
+            if (game.OrganizerId != organizerProfile.Id)
+            {
+                throw new ForbiddenAccessException();
+            }
+
             game.UpdateDetails(
-                request.OrganizerId,
+                organizerProfile.Id,
                 request.CourtId,
                 request.StartsAt,
                 request.EndsAt,

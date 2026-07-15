@@ -10,9 +10,6 @@ namespace VolleyHub.Application.Games.Commands.UpdateGame
             RuleFor(command => command.Id)
                 .NotEmpty();
 
-            RuleFor(command => command.OrganizerId)
-                .NotEmpty();
-
             RuleFor(command => command.CourtId)
                 .NotEmpty();
 

@@ -4,7 +4,6 @@ using VolleyHub.Domain.Games;
 namespace VolleyHub.Application.Games.Commands.CreateGame
 {
     public sealed record CreateGameCommand(
-        Guid OrganizerId,
         Guid CourtId,
         DateTimeOffset StartsAt,
         DateTimeOffset? EndsAt,

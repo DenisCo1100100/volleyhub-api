@@ -7,9 +7,6 @@ namespace VolleyHub.Application.Games.Commands.CreateGame
     {
         public CreateGameCommandValidator()
         {
-            RuleFor(command => command.OrganizerId)
-                .NotEmpty();
-
             RuleFor(command => command.CourtId)
                 .NotEmpty();
 
