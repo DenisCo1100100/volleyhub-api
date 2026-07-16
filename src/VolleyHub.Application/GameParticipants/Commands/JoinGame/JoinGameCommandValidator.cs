@@ -8,9 +8,6 @@ namespace VolleyHub.Application.GameParticipants.Commands.JoinGame
         {
             RuleFor(command => command.GameId)
                 .NotEmpty();
-
-            RuleFor(command => command.PlayerProfileId)
-                .NotEmpty();
         }
     }
 }

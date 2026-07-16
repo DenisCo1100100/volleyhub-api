@@ -8,6 +8,7 @@ using VolleyHub.Application.GameParticipants.Commands.RemoveParticipant;
 using VolleyHub.Application.GameParticipants.Queries.GetGameParticipants;
 using VolleyHub.Application.GameParticipants.Commands.MarkParticipantAttendance;
 using VolleyHub.Domain.Games;
+using Microsoft.AspNetCore.Authorization;
 
 namespace VolleyHub.Api.Controllers
 {
@@ -34,16 +35,14 @@ namespace VolleyHub.Api.Controllers
             return Ok(participants);
         }
 
+        [Authorize]
         [HttpPost("games/{gameId:guid}/participants")]
         public async Task<IActionResult> JoinGame(
             Guid gameId,
-            JoinGameRequest request,
             CancellationToken cancellationToken)
         {
             var participantId = await _sender.Send(
-                new JoinGameCommand(
-                    gameId,
-                    request.PlayerProfileId),
+                new JoinGameCommand(gameId),
                 cancellationToken);
 
             return CreatedAtAction(
@@ -52,6 +51,7 @@ namespace VolleyHub.Api.Controllers
                 participantId);
         }
 
+        [Authorize]
         [HttpPost("game-participants/{participantId:guid}/approve")]
         public async Task<IActionResult> ApproveParticipant(
             Guid participantId,
@@ -64,6 +64,7 @@ namespace VolleyHub.Api.Controllers
             return NoContent();
         }
 
+        [Authorize]
         [HttpPost("game-participants/{participantId:guid}/reject")]
         public async Task<IActionResult> RejectParticipant(
             Guid participantId,
@@ -76,6 +77,7 @@ namespace VolleyHub.Api.Controllers
             return NoContent();
         }
 
+        [Authorize]
         [HttpPost("game-participants/{participantId:guid}/attendance")]
         public async Task<IActionResult> MarkParticipantAttendance(
             Guid participantId,
@@ -91,21 +93,20 @@ namespace VolleyHub.Api.Controllers
             return NoContent();
         }
 
+        [Authorize]
         [HttpPost("games/{gameId:guid}/participants/leave")]
         public async Task<IActionResult> LeaveGame(
             Guid gameId,
-            LeaveGameRequest request,
             CancellationToken cancellationToken)
         {
             await _sender.Send(
-                new LeaveGameCommand(
-                    gameId,
-                    request.PlayerProfileId),
+                new LeaveGameCommand(gameId),
                 cancellationToken);
 
             return NoContent();
         }
 
+        [Authorize]
         [HttpDelete("game-participants/{participantId:guid}")]
         public async Task<IActionResult> RemoveParticipant(
             Guid participantId,
@@ -117,10 +118,6 @@ namespace VolleyHub.Api.Controllers
 
             return NoContent();
         }
-
-        public sealed record JoinGameRequest(Guid PlayerProfileId);
-
-        public sealed record LeaveGameRequest(Guid PlayerProfileId);
 
         public sealed record MarkParticipantAttendanceRequest(GameParticipantAttendanceStatus AttendanceStatus);
     }

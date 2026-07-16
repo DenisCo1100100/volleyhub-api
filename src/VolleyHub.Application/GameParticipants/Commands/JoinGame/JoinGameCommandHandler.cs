@@ -2,6 +2,7 @@
 using VolleyHub.Application.Common.Exceptions;
 using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Domain.Games;
+using VolleyHub.Domain.PlayerProfiles;
 
 namespace VolleyHub.Application.GameParticipants.Commands.JoinGame
 {
@@ -9,17 +10,23 @@ namespace VolleyHub.Application.GameParticipants.Commands.JoinGame
     {
         private readonly IGameRepository _gameRepository;
         private readonly IGameParticipantRepository _gameParticipantRepository;
+        private readonly IPlayerProfileRepository _playerProfileRepository;
+        private readonly ICurrentUserService _currentUserService;
         private readonly IDateTimeProvider _dateTimeProvider;
         private readonly IUnitOfWork _unitOfWork;
 
         public JoinGameCommandHandler(
             IGameRepository gameRepository,
             IGameParticipantRepository gameParticipantRepository,
+            IPlayerProfileRepository playerProfileRepository,
+            ICurrentUserService currentUserService,
             IDateTimeProvider dateTimeProvider,
             IUnitOfWork unitOfWork)
         {
             _gameRepository = gameRepository;
             _gameParticipantRepository = gameParticipantRepository;
+            _playerProfileRepository = playerProfileRepository;
+            _currentUserService = currentUserService;
             _dateTimeProvider = dateTimeProvider;
             _unitOfWork = unitOfWork;
         }
@@ -28,6 +35,22 @@ namespace VolleyHub.Application.GameParticipants.Commands.JoinGame
             JoinGameCommand request,
             CancellationToken cancellationToken)
         {
+            var currentUserId = _currentUserService.UserId;
+
+            if (currentUserId is null)
+            {
+                throw new UnauthorizedException();
+            }
+
+            var playerProfile = await _playerProfileRepository.GetByUserIdAsync(
+                currentUserId.Value,
+                cancellationToken);
+
+            if (playerProfile is null || playerProfile.IsDeleted)
+            {
+                throw new NotFoundException(nameof(PlayerProfile), currentUserId.Value);
+            }
+
             var game = await _gameRepository.GetByIdAsync(
                 request.GameId,
                 cancellationToken);
@@ -49,7 +72,7 @@ namespace VolleyHub.Application.GameParticipants.Commands.JoinGame
 
             var existingParticipant = await _gameParticipantRepository.GetByGameAndPlayerProfileIdAsync(
                 request.GameId,
-                request.PlayerProfileId,
+                playerProfile.Id,
                 cancellationToken);
 
             if (existingParticipant is not null)
@@ -74,14 +97,14 @@ namespace VolleyHub.Application.GameParticipants.Commands.JoinGame
             {
                 GameJoinPolicy.Open => JoinOpenGame(
                     game,
-                    request.PlayerProfileId,
+                    playerProfile.Id,
                     now,
                     offlinePaymentStatus,
                     approvedParticipantsCount),
 
                 GameJoinPolicy.ApprovalRequired => GameParticipant.RequestToJoin(
                     game.Id,
-                    request.PlayerProfileId,
+                    playerProfile.Id,
                     now,
                     offlinePaymentStatus),
 

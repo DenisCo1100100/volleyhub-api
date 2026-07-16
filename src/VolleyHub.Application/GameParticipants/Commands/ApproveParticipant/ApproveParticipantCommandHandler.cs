@@ -2,6 +2,7 @@
 using VolleyHub.Application.Common.Exceptions;
 using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Domain.Games;
+using VolleyHub.Domain.PlayerProfiles;
 
 namespace VolleyHub.Application.GameParticipants.Commands.ApproveParticipant
 {
@@ -9,17 +10,23 @@ namespace VolleyHub.Application.GameParticipants.Commands.ApproveParticipant
     {
         private readonly IGameRepository _gameRepository;
         private readonly IGameParticipantRepository _gameParticipantRepository;
+        private readonly IPlayerProfileRepository _playerProfileRepository;
+        private readonly ICurrentUserService _currentUserService;
         private readonly IDateTimeProvider _dateTimeProvider;
         private readonly IUnitOfWork _unitOfWork;
 
         public ApproveParticipantCommandHandler(
             IGameRepository gameRepository,
             IGameParticipantRepository gameParticipantRepository,
+            IPlayerProfileRepository playerProfileRepository,
+            ICurrentUserService currentUserService,
             IDateTimeProvider dateTimeProvider,
             IUnitOfWork unitOfWork)
         {
             _gameRepository = gameRepository;
             _gameParticipantRepository = gameParticipantRepository;
+            _playerProfileRepository = playerProfileRepository;
+            _currentUserService = currentUserService;
             _dateTimeProvider = dateTimeProvider;
             _unitOfWork = unitOfWork;
         }
@@ -28,6 +35,22 @@ namespace VolleyHub.Application.GameParticipants.Commands.ApproveParticipant
             ApproveParticipantCommand request,
             CancellationToken cancellationToken)
         {
+            var currentUserId = _currentUserService.UserId;
+
+            if (currentUserId is null)
+            {
+                throw new UnauthorizedException();
+            }
+
+            var organizerProfile = await _playerProfileRepository.GetByUserIdAsync(
+                currentUserId.Value,
+                cancellationToken);
+
+            if (organizerProfile is null || organizerProfile.IsDeleted)
+            {
+                throw new NotFoundException(nameof(PlayerProfile), currentUserId.Value);
+            }
+
             var participant = await _gameParticipantRepository.GetByIdAsync(
                 request.ParticipantId,
                 cancellationToken);
@@ -44,6 +67,11 @@ namespace VolleyHub.Application.GameParticipants.Commands.ApproveParticipant
             if (game is null)
             {
                 throw new NotFoundException(nameof(Game), participant.GameId);
+            }
+
+            if (game.OrganizerId != organizerProfile.Id)
+            {
+                throw new ForbiddenAccessException();
             }
 
             if (game.Status is not GameStatus.Open)
