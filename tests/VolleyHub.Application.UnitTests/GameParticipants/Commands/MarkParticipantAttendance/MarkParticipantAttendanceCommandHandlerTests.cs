@@ -4,6 +4,7 @@ using VolleyHub.Application.Common.Exceptions;
 using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Application.GameParticipants.Commands.MarkParticipantAttendance;
 using VolleyHub.Domain.Games;
+using VolleyHub.Domain.PlayerProfiles;
 
 namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.MarkParticipantAttendance
 {
@@ -12,15 +13,26 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.MarkParticip
         [Theory]
         [InlineData(GameParticipantAttendanceStatus.Present)]
         [InlineData(GameParticipantAttendanceStatus.Absent)]
-        public async Task Handle_ShouldMarkAttendanceAndSaveChanges_WhenGameIsCompletedAndParticipantIsApproved(
+        public async Task Handle_ShouldMarkAttendanceAndSaveChanges_WhenCurrentUserIsOrganizerAndGameIsCompletedAndParticipantIsApproved(
             GameParticipantAttendanceStatus attendanceStatus)
         {
-            var game = CreateCompletedGame();
+            var currentUserId = Guid.NewGuid();
+            var organizerProfile = CreatePlayerProfile(currentUserId);
+
+            var game = CreateCompletedGame(organizerProfile.Id);
             var participant = CreateApprovedParticipant(game.Id);
 
             var gameRepositoryMock = new Mock<IGameRepository>();
             var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
+            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
             var unitOfWorkMock = new Mock<IUnitOfWork>();
+
+            SetupCurrentOrganizer(
+                currentUserServiceMock,
+                playerProfileRepositoryMock,
+                currentUserId,
+                organizerProfile);
 
             gameParticipantRepositoryMock
                 .Setup(repository => repository.GetByIdAsync(
@@ -41,6 +53,8 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.MarkParticip
             var handler = new MarkParticipantAttendanceCommandHandler(
                 gameRepositoryMock.Object,
                 gameParticipantRepositoryMock.Object,
+                playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
                 unitOfWorkMock.Object);
 
             var command = new MarkParticipantAttendanceCommand(
@@ -61,34 +75,40 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.MarkParticip
         }
 
         [Fact]
-        public async Task Handle_ShouldThrowNotFoundException_WhenParticipantDoesNotExist()
+        public async Task Handle_ShouldThrowUnauthorizedException_WhenCurrentUserDoesNotExist()
         {
-            var participantId = Guid.NewGuid();
-
             var gameRepositoryMock = new Mock<IGameRepository>();
             var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
+            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
             var unitOfWorkMock = new Mock<IUnitOfWork>();
 
-            gameParticipantRepositoryMock
-                .Setup(repository => repository.GetByIdAsync(
-                    participantId,
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync((GameParticipant?)null);
+            currentUserServiceMock
+                .Setup(service => service.UserId)
+                .Returns((Guid?)null);
 
             var handler = new MarkParticipantAttendanceCommandHandler(
                 gameRepositoryMock.Object,
                 gameParticipantRepositoryMock.Object,
+                playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
                 unitOfWorkMock.Object);
 
             var command = new MarkParticipantAttendanceCommand(
-                participantId,
+                Guid.NewGuid(),
                 GameParticipantAttendanceStatus.Present);
 
             Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
 
-            await act.Should().ThrowAsync<NotFoundException>();
+            await act.Should().ThrowAsync<UnauthorizedException>();
 
-            gameRepositoryMock.Verify(
+            playerProfileRepositoryMock.Verify(
+                repository => repository.GetByUserIdAsync(
+                    It.IsAny<Guid>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Never);
+
+            gameParticipantRepositoryMock.Verify(
                 repository => repository.GetByIdAsync(
                     It.IsAny<Guid>(),
                     It.IsAny<CancellationToken>()),
@@ -104,13 +124,168 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.MarkParticip
         }
 
         [Fact]
+        public async Task Handle_ShouldThrowNotFoundException_WhenCurrentUserDoesNotHavePlayerProfile()
+        {
+            var currentUserId = Guid.NewGuid();
+
+            var gameRepositoryMock = new Mock<IGameRepository>();
+            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
+            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
+            var unitOfWorkMock = new Mock<IUnitOfWork>();
+
+            SetupCurrentOrganizer(
+                currentUserServiceMock,
+                playerProfileRepositoryMock,
+                currentUserId,
+                organizerProfile: null);
+
+            var handler = new MarkParticipantAttendanceCommandHandler(
+                gameRepositoryMock.Object,
+                gameParticipantRepositoryMock.Object,
+                playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
+                unitOfWorkMock.Object);
+
+            var command = new MarkParticipantAttendanceCommand(
+                Guid.NewGuid(),
+                GameParticipantAttendanceStatus.Present);
+
+            Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
+
+            await act.Should().ThrowAsync<NotFoundException>();
+
+            gameParticipantRepositoryMock.Verify(
+                repository => repository.GetByIdAsync(
+                    It.IsAny<Guid>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Never);
+
+            gameParticipantRepositoryMock.Verify(
+                repository => repository.Update(It.IsAny<GameParticipant>()),
+                Times.Never);
+
+            unitOfWorkMock.Verify(
+                unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task Handle_ShouldThrowNotFoundException_WhenCurrentUserPlayerProfileIsDeleted()
+        {
+            var currentUserId = Guid.NewGuid();
+            var organizerProfile = CreatePlayerProfile(currentUserId);
+            organizerProfile.Delete();
+
+            var gameRepositoryMock = new Mock<IGameRepository>();
+            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
+            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
+            var unitOfWorkMock = new Mock<IUnitOfWork>();
+
+            SetupCurrentOrganizer(
+                currentUserServiceMock,
+                playerProfileRepositoryMock,
+                currentUserId,
+                organizerProfile);
+
+            var handler = new MarkParticipantAttendanceCommandHandler(
+                gameRepositoryMock.Object,
+                gameParticipantRepositoryMock.Object,
+                playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
+                unitOfWorkMock.Object);
+
+            var command = new MarkParticipantAttendanceCommand(
+                Guid.NewGuid(),
+                GameParticipantAttendanceStatus.Present);
+
+            Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
+
+            await act.Should().ThrowAsync<NotFoundException>();
+
+            gameParticipantRepositoryMock.Verify(
+                repository => repository.GetByIdAsync(
+                    It.IsAny<Guid>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Never);
+
+            gameParticipantRepositoryMock.Verify(
+                repository => repository.Update(It.IsAny<GameParticipant>()),
+                Times.Never);
+
+            unitOfWorkMock.Verify(
+                unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task Handle_ShouldThrowNotFoundException_WhenParticipantDoesNotExist()
+        {
+            var currentUserId = Guid.NewGuid();
+            var organizerProfile = CreatePlayerProfile(currentUserId);
+            var participantId = Guid.NewGuid();
+
+            var gameRepositoryMock = new Mock<IGameRepository>();
+            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
+            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
+            var unitOfWorkMock = new Mock<IUnitOfWork>();
+
+            SetupCurrentOrganizer(
+                currentUserServiceMock,
+                playerProfileRepositoryMock,
+                currentUserId,
+                organizerProfile);
+
+            gameParticipantRepositoryMock
+                .Setup(repository => repository.GetByIdAsync(
+                    participantId,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync((GameParticipant?)null);
+
+            var handler = new MarkParticipantAttendanceCommandHandler(
+                gameRepositoryMock.Object,
+                gameParticipantRepositoryMock.Object,
+                playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
+                unitOfWorkMock.Object);
+
+            var command = new MarkParticipantAttendanceCommand(
+                participantId,
+                GameParticipantAttendanceStatus.Present);
+
+            Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
+
+            await act.Should().ThrowAsync<NotFoundException>();
+
+            gameParticipantRepositoryMock.Verify(
+                repository => repository.Update(It.IsAny<GameParticipant>()),
+                Times.Never);
+
+            unitOfWorkMock.Verify(
+                unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [Fact]
         public async Task Handle_ShouldThrowNotFoundException_WhenGameDoesNotExist()
         {
+            var currentUserId = Guid.NewGuid();
+            var organizerProfile = CreatePlayerProfile(currentUserId);
             var participant = CreateApprovedParticipant(Guid.NewGuid());
 
             var gameRepositoryMock = new Mock<IGameRepository>();
             var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
+            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
             var unitOfWorkMock = new Mock<IUnitOfWork>();
+
+            SetupCurrentOrganizer(
+                currentUserServiceMock,
+                playerProfileRepositoryMock,
+                currentUserId,
+                organizerProfile);
 
             gameParticipantRepositoryMock
                 .Setup(repository => repository.GetByIdAsync(
@@ -127,6 +302,8 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.MarkParticip
             var handler = new MarkParticipantAttendanceCommandHandler(
                 gameRepositoryMock.Object,
                 gameParticipantRepositoryMock.Object,
+                playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
                 unitOfWorkMock.Object);
 
             var command = new MarkParticipantAttendanceCommand(
@@ -147,14 +324,25 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.MarkParticip
         }
 
         [Fact]
-        public async Task Handle_ShouldThrowInvalidOperationException_WhenGameIsNotCompleted()
+        public async Task Handle_ShouldThrowForbiddenAccessException_WhenCurrentUserIsNotOrganizer()
         {
-            var game = CreateOpenGame();
+            var currentUserId = Guid.NewGuid();
+            var currentUserProfile = CreatePlayerProfile(currentUserId);
+
+            var game = CreateCompletedGame(organizerId: Guid.NewGuid());
             var participant = CreateApprovedParticipant(game.Id);
 
             var gameRepositoryMock = new Mock<IGameRepository>();
             var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
+            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
             var unitOfWorkMock = new Mock<IUnitOfWork>();
+
+            SetupCurrentOrganizer(
+                currentUserServiceMock,
+                playerProfileRepositoryMock,
+                currentUserId,
+                currentUserProfile);
 
             gameParticipantRepositoryMock
                 .Setup(repository => repository.GetByIdAsync(
@@ -171,6 +359,65 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.MarkParticip
             var handler = new MarkParticipantAttendanceCommandHandler(
                 gameRepositoryMock.Object,
                 gameParticipantRepositoryMock.Object,
+                playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
+                unitOfWorkMock.Object);
+
+            var command = new MarkParticipantAttendanceCommand(
+                participant.Id,
+                GameParticipantAttendanceStatus.Present);
+
+            Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
+
+            await act.Should().ThrowAsync<ForbiddenAccessException>();
+
+            gameParticipantRepositoryMock.Verify(
+                repository => repository.Update(It.IsAny<GameParticipant>()),
+                Times.Never);
+
+            unitOfWorkMock.Verify(
+                unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task Handle_ShouldThrowInvalidOperationException_WhenGameIsNotCompleted()
+        {
+            var currentUserId = Guid.NewGuid();
+            var organizerProfile = CreatePlayerProfile(currentUserId);
+
+            var game = CreateOpenGame(organizerProfile.Id);
+            var participant = CreateApprovedParticipant(game.Id);
+
+            var gameRepositoryMock = new Mock<IGameRepository>();
+            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
+            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
+            var unitOfWorkMock = new Mock<IUnitOfWork>();
+
+            SetupCurrentOrganizer(
+                currentUserServiceMock,
+                playerProfileRepositoryMock,
+                currentUserId,
+                organizerProfile);
+
+            gameParticipantRepositoryMock
+                .Setup(repository => repository.GetByIdAsync(
+                    participant.Id,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(participant);
+
+            gameRepositoryMock
+                .Setup(repository => repository.GetByIdAsync(
+                    game.Id,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(game);
+
+            var handler = new MarkParticipantAttendanceCommandHandler(
+                gameRepositoryMock.Object,
+                gameParticipantRepositoryMock.Object,
+                playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
                 unitOfWorkMock.Object);
 
             var command = new MarkParticipantAttendanceCommand(
@@ -193,12 +440,23 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.MarkParticip
         [Fact]
         public async Task Handle_ShouldThrowInvalidOperationException_WhenParticipantIsNotApproved()
         {
-            var game = CreateCompletedGame();
+            var currentUserId = Guid.NewGuid();
+            var organizerProfile = CreatePlayerProfile(currentUserId);
+
+            var game = CreateCompletedGame(organizerProfile.Id);
             var participant = CreatePendingParticipant(game.Id);
 
             var gameRepositoryMock = new Mock<IGameRepository>();
             var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
+            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
             var unitOfWorkMock = new Mock<IUnitOfWork>();
+
+            SetupCurrentOrganizer(
+                currentUserServiceMock,
+                playerProfileRepositoryMock,
+                currentUserId,
+                organizerProfile);
 
             gameParticipantRepositoryMock
                 .Setup(repository => repository.GetByIdAsync(
@@ -215,6 +473,8 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.MarkParticip
             var handler = new MarkParticipantAttendanceCommandHandler(
                 gameRepositoryMock.Object,
                 gameParticipantRepositoryMock.Object,
+                playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
                 unitOfWorkMock.Object);
 
             var command = new MarkParticipantAttendanceCommand(
@@ -234,12 +494,29 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.MarkParticip
                 Times.Never);
         }
 
-        private static Game CreateOpenGame()
+        private static void SetupCurrentOrganizer(
+            Mock<ICurrentUserService> currentUserServiceMock,
+            Mock<IPlayerProfileRepository> playerProfileRepositoryMock,
+            Guid currentUserId,
+            PlayerProfile? organizerProfile)
+        {
+            currentUserServiceMock
+                .Setup(service => service.UserId)
+                .Returns(currentUserId);
+
+            playerProfileRepositoryMock
+                .Setup(repository => repository.GetByUserIdAsync(
+                    currentUserId,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(organizerProfile);
+        }
+
+        private static Game CreateOpenGame(Guid organizerId)
         {
             var startsAt = DateTimeOffset.UtcNow.AddDays(1);
 
             return Game.Create(
-                organizerId: Guid.NewGuid(),
+                organizerId: organizerId,
                 courtId: Guid.NewGuid(),
                 startsAt: startsAt,
                 endsAt: startsAt.AddHours(2),
@@ -250,9 +527,9 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.MarkParticip
                 description: "Evening volleyball game");
         }
 
-        private static Game CreateCompletedGame()
+        private static Game CreateCompletedGame(Guid organizerId)
         {
-            var game = CreateOpenGame();
+            var game = CreateOpenGame(organizerId);
 
             game.Complete();
 
@@ -275,6 +552,16 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.MarkParticip
                 playerProfileId: Guid.NewGuid(),
                 joinedAt: DateTimeOffset.UtcNow.AddMinutes(-20),
                 offlinePaymentStatus: GameParticipantOfflinePaymentStatus.Pending);
+        }
+
+        private static PlayerProfile CreatePlayerProfile(Guid userId)
+        {
+            return PlayerProfile.Create(
+                userId: userId,
+                displayName: "John Player",
+                skillLevel: PlayerSkillLevel.Intermediate,
+                city: "Amsterdam",
+                bio: "I like volleyball.");
         }
     }
 }
