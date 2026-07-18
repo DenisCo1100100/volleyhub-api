@@ -1,4 +1,4 @@
-using MediatR;
+ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using VolleyHub.Application.PlayerProfiles.Commands.CreatePlayerProfile;
 using VolleyHub.Application.PlayerProfiles.Commands.DeletePlayerProfile;
@@ -6,6 +6,7 @@ using VolleyHub.Application.PlayerProfiles.Commands.UpdatePlayerProfile;
 using VolleyHub.Application.PlayerProfiles.Queries.GetPlayerProfileById;
 using VolleyHub.Application.PlayerProfiles.Queries.GetPlayerProfiles;
 using VolleyHub.Application.PlayerProfiles.Queries.GetPlayerReliabilitySummary;
+using VolleyHub.Application.PlayerProfiles.Queries.GetCurrentPlayerProfile;
 using Microsoft.AspNetCore.Authorization;
 using VolleyHub.Domain.PlayerProfiles;
 
@@ -54,6 +55,18 @@ namespace VolleyHub.Api.Controllers
                 cancellationToken);
 
             return Ok(reliabilitySummary);
+        }
+
+        [Authorize]
+        [HttpGet("me")]
+            public async Task<IActionResult> GetCurrentPlayerProfile(
+            CancellationToken cancellationToken)
+        {
+            var playerProfile = await _sender.Send(
+                new GetCurrentPlayerProfileQuery(),
+                cancellationToken);
+
+            return Ok(playerProfile);
         }
 
         [Authorize]
