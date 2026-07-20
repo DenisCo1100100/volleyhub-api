@@ -3,6 +3,7 @@ using VolleyHub.Application.Common.Exceptions;
 using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Domain.Games;
 using VolleyHub.Domain.PlayerProfiles;
+using VolleyHub.Domain.Common;
 
 namespace VolleyHub.Application.GameParticipants.Commands.MarkParticipantAttendance
 {
@@ -73,7 +74,7 @@ namespace VolleyHub.Application.GameParticipants.Commands.MarkParticipantAttenda
 
             if (game.Status is not GameStatus.Completed)
             {
-                throw new InvalidOperationException("Attendance can be marked only after the game is completed.");
+                throw new BusinessRuleException("Attendance can be marked only after the game is completed.");
             }
 
             participant.MarkAttendance(request.AttendanceStatus);

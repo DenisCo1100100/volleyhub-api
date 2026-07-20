@@ -1,4 +1,5 @@
 ﻿using FluentAssertions;
+using VolleyHub.Domain.Common;
 using VolleyHub.Domain.Games;
 
 namespace VolleyHub.Domain.UnitTests.Games
@@ -410,7 +411,7 @@ namespace VolleyHub.Domain.UnitTests.Games
         }
 
         [Fact]
-        public void UpdateDetails_ShouldThrowInvalidOperationException_WhenGameIsCancelled()
+        public void UpdateDetails_ShouldThrowBusinessRuleException_WhenGameIsCancelled()
         {
             // Arrange
             var game = CreateGame();
@@ -429,11 +430,11 @@ namespace VolleyHub.Domain.UnitTests.Games
                 description: "Updated game");
 
             // Assert
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<BusinessRuleException>();
         }
 
         [Fact]
-        public void Complete_ShouldThrowInvalidOperationException_WhenGameIsCancelled()
+        public void Complete_ShouldThrowBusinessRuleException_WhenGameIsCancelled()
         {
             // Arrange
             var game = CreateGame();
@@ -443,11 +444,11 @@ namespace VolleyHub.Domain.UnitTests.Games
             Action act = () => game.Complete();
 
             // Assert
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<BusinessRuleException>();
         }
 
         [Fact]
-        public void Cancel_ShouldThrowInvalidOperationException_WhenGameIsCompleted()
+        public void Cancel_ShouldThrowBusinessRuleException_WhenGameIsCompleted()
         {
             // Arrange
             var game = CreateGame();
@@ -457,7 +458,7 @@ namespace VolleyHub.Domain.UnitTests.Games
             Action act = () => game.Cancel();
 
             // Assert
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<BusinessRuleException>();
         }
 
         private static Game CreateGame()

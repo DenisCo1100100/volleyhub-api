@@ -3,6 +3,7 @@ using Moq;
 using VolleyHub.Application.Common.Exceptions;
 using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Application.GameParticipants.Commands.LeaveGame;
+using VolleyHub.Domain.Common;
 using VolleyHub.Domain.Games;
 using VolleyHub.Domain.PlayerProfiles;
 
@@ -380,7 +381,7 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.LeaveGame
         }
 
         [Fact]
-        public async Task Handle_ShouldThrowInvalidOperationException_WhenParticipantIsRejected()
+        public async Task Handle_ShouldThrowBusinessRuleException_WhenParticipantIsRejected()
         {
             var currentUserId = Guid.NewGuid();
             var playerProfile = CreatePlayerProfile(currentUserId);
@@ -423,7 +424,7 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.LeaveGame
 
             Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
 
-            await act.Should().ThrowAsync<InvalidOperationException>();
+            await act.Should().ThrowAsync<BusinessRuleException>();
 
             gameParticipantRepositoryMock.Verify(
                 repository => repository.Update(It.IsAny<GameParticipant>()),

@@ -1,4 +1,5 @@
 ﻿using FluentAssertions;
+using VolleyHub.Domain.Common;
 using VolleyHub.Domain.Games;
 
 namespace VolleyHub.Domain.UnitTests.Games
@@ -167,13 +168,13 @@ namespace VolleyHub.Domain.UnitTests.Games
         }
 
         [Fact]
-        public void Approve_ShouldThrowInvalidOperationException_WhenParticipantIsAlreadyApproved()
+        public void Approve_ShouldThrowBusinessRuleException_WhenParticipantIsAlreadyApproved()
         {
             var participant = CreateApprovedParticipant();
 
             Action act = () => participant.Approve(DateTimeOffset.UtcNow);
 
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<BusinessRuleException>();
         }
 
         [Fact]
@@ -188,34 +189,34 @@ namespace VolleyHub.Domain.UnitTests.Games
         }
 
         [Fact]
-        public void Reject_ShouldThrowInvalidOperationException_WhenParticipantIsAlreadyApproved()
+        public void Reject_ShouldThrowBusinessRuleException_WhenParticipantIsAlreadyApproved()
         {
             var participant = CreateApprovedParticipant();
 
             Action act = () => participant.Reject();
 
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<BusinessRuleException>();
         }
 
         [Fact]
-        public void Cancel_ShouldThrowInvalidOperationException_WhenParticipantIsRejected()
+        public void Cancel_ShouldThrowBusinessRuleException_WhenParticipantIsRejected()
         {
             var participant = CreatePendingParticipant();
             participant.Reject();
 
             Action act = () => participant.Cancel();
 
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<BusinessRuleException>();
         }
 
         [Fact]
-        public void MarkAttendance_ShouldThrowInvalidOperationException_WhenParticipantIsPending()
+        public void MarkAttendance_ShouldThrowBusinessRuleException_WhenParticipantIsPending()
         {
             var participant = CreatePendingParticipant();
 
             Action act = () => participant.MarkAttendance(GameParticipantAttendanceStatus.Present);
 
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<BusinessRuleException>();
         }
 
         [Theory]
@@ -233,14 +234,14 @@ namespace VolleyHub.Domain.UnitTests.Games
         }
 
         [Fact]
-        public void MarkOfflinePaymentAsPaid_ShouldThrowInvalidOperationException_WhenPaymentIsNotRequired()
+        public void MarkOfflinePaymentAsPaid_ShouldThrowBusinessRuleException_WhenPaymentIsNotRequired()
         {
             var participant = CreateApprovedParticipant(
                 offlinePaymentStatus: GameParticipantOfflinePaymentStatus.NotRequired);
 
             Action act = () => participant.MarkOfflinePaymentAsPaid();
 
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<BusinessRuleException>();
         }
 
         private static GameParticipant CreatePendingParticipant()

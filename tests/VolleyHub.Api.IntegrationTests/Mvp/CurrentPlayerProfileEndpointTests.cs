@@ -190,6 +190,46 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
             return authResult;
         }
 
+        [Fact]
+        public async Task CreatePlayerProfile_ShouldReturnConflict_WhenCurrentUserAlreadyHasProfile()
+        {
+            var uniqueId = Guid.NewGuid().ToString("N");
+
+            var client = _factory.CreateClient();
+
+            await RegisterAndAuthorizeAsync(
+                client,
+                $"duplicate-profile-{uniqueId}@test.com");
+
+            await CreatePlayerProfileAsync(client);
+
+            var response = await client.PostAsJsonAsync(
+                "/api/player-profiles",
+                new
+                {
+                    DisplayName = "Duplicate Player",
+                    SkillLevel = PlayerSkillLevel.Intermediate,
+                    City = "Amsterdam",
+                    Bio = "Duplicate profile."
+                });
+
+            response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+            response.Content.Headers.ContentType?.MediaType.Should()
+                .Be("application/problem+json");
+
+            var problemDetails = await response.Content
+                .ReadFromJsonAsync<ProblemDetailsResponse>();
+
+            problemDetails.Should().NotBeNull();
+            problemDetails!.Status.Should().Be((int)HttpStatusCode.Conflict);
+            problemDetails.Title.Should().Be("Conflict");
+            problemDetails.Detail.Should()
+                .Be("User already has a player profile.");
+            problemDetails.Instance.Should()
+                .Be("/api/player-profiles");
+        }
+
         private static async Task<Guid> CreatePlayerProfileAsync(HttpClient client)
         {
             var response = await client.PostAsJsonAsync(
@@ -221,5 +261,11 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
             string? Bio,
             DateTimeOffset CreatedAt,
             DateTimeOffset? UpdatedAt);
+
+        private sealed record ProblemDetailsResponse(
+            int? Status,
+            string? Title,
+            string? Detail,
+            string? Instance);
     }
 }
