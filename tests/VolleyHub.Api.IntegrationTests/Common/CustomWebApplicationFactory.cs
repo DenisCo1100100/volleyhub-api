@@ -24,6 +24,10 @@ namespace VolleyHub.Api.IntegrationTests.Common
             Environment.SetEnvironmentVariable(
                 "Jwt__Secret",
                 "volleyhub-test-secret-key-change-me-please-1234567890");
+
+            Environment.SetEnvironmentVariable(
+                "Cors__AllowedOrigins__0",
+                "http://localhost:5173");
         }
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
