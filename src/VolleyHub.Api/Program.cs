@@ -9,10 +9,30 @@ using VolleyHub.Application;
 using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Infrastructure;
 using VolleyHub.Infrastructure.Auth;
+using VolleyHub.Api.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+
+var corsOptions = builder.Configuration
+    .GetSection(CorsOptions.SectionName)
+    .Get<CorsOptions>() ?? new CorsOptions();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(
+        CorsOptions.SectionName,
+        policy =>
+        {
+            if (corsOptions.AllowedOrigins.Length > 0)
+            {
+                policy.WithOrigins(corsOptions.AllowedOrigins)
+                    .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                    .WithHeaders("Authorization", "Content-Type");
+            }
+        });
+});
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -80,6 +100,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors(CorsOptions.SectionName);
 
 app.UseAuthentication();
 app.UseAuthorization();
