@@ -5,6 +5,7 @@ using VolleyHub.Application.Courts.Commands.DeleteCourt;
 using VolleyHub.Application.Courts.Commands.UpdateCourt;
 using VolleyHub.Application.Courts.Queries.GetCourtById;
 using VolleyHub.Application.Courts.Queries.GetCourts;
+using Microsoft.AspNetCore.Authorization;
 
 namespace VolleyHub.Api.Controllers
 {
@@ -37,6 +38,7 @@ namespace VolleyHub.Api.Controllers
             return Ok(court);
         }
 
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> CreateCourt(
             CreateCourtCommand command,
@@ -50,6 +52,7 @@ namespace VolleyHub.Api.Controllers
                 courtId);
         }
 
+        [Authorize]
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> UpdateCourt(
             Guid id,
@@ -69,6 +72,7 @@ namespace VolleyHub.Api.Controllers
             return NoContent();
         }
 
+        [Authorize]
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> DeleteCourt(
             Guid id,

@@ -45,7 +45,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
 
             playerProfileId.Should().NotBeEmpty();
 
-            var courtId = await CreateCourtAsync();
+            var courtId = await CreateCourtAsync(organizerClient);
             courtId.Should().NotBeEmpty();
 
             var gameId = await CreateGameAsync(organizerClient, courtId);
@@ -146,10 +146,8 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
             return await response.Content.ReadFromJsonAsync<Guid>();
         }
 
-        private async Task<Guid> CreateCourtAsync()
+        private static async Task<Guid> CreateCourtAsync(HttpClient client)
         {
-            var client = _factory.CreateClient();
-
             var response = await client.PostAsJsonAsync(
                 "/api/courts",
                 new
