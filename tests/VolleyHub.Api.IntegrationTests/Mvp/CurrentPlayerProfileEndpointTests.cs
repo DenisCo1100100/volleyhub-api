@@ -70,6 +70,88 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
             profile.Bio.Should().Be("Current player profile.");
         }
 
+        [Fact]
+        public async Task UpdateCurrentPlayerProfile_ShouldReturnUnauthorized_WhenTokenIsMissing()
+        {
+            var client = _factory.CreateClient();
+
+            var response = await client.PutAsJsonAsync(
+                "/api/player-profiles/me",
+                new
+                {
+                    DisplayName = "Updated Player",
+                    SkillLevel = PlayerSkillLevel.Advanced,
+                    City = "Rotterdam",
+                    Bio = "Updated bio."
+                });
+
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        [Fact]
+        public async Task UpdateCurrentPlayerProfile_ShouldReturnNotFound_WhenCurrentUserHasNoProfile()
+        {
+            var uniqueId = Guid.NewGuid().ToString("N");
+
+            var client = _factory.CreateClient();
+
+            await RegisterAndAuthorizeAsync(
+                client,
+                $"update-me-no-profile-{uniqueId}@test.com");
+
+            var response = await client.PutAsJsonAsync(
+                "/api/player-profiles/me",
+                new
+                {
+                    DisplayName = "Updated Player",
+                    SkillLevel = PlayerSkillLevel.Advanced,
+                    City = "Rotterdam",
+                    Bio = "Updated bio."
+                });
+
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
+        [Fact]
+        public async Task UpdateCurrentPlayerProfile_ShouldUpdateCurrentUserProfile_WhenProfileExists()
+        {
+            var uniqueId = Guid.NewGuid().ToString("N");
+
+            var client = _factory.CreateClient();
+
+            var authResult = await RegisterAndAuthorizeAsync(
+                client,
+                $"update-me-profile-{uniqueId}@test.com");
+
+            var profileId = await CreatePlayerProfileAsync(client);
+
+            var updateResponse = await client.PutAsJsonAsync(
+                "/api/player-profiles/me",
+                new
+                {
+                    DisplayName = "Updated Current Player",
+                    SkillLevel = PlayerSkillLevel.Advanced,
+                    City = "Rotterdam",
+                    Bio = "Updated current player profile."
+                });
+
+            updateResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var getResponse = await client.GetAsync("/api/player-profiles/me");
+
+            getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var profile = await getResponse.Content.ReadFromJsonAsync<PlayerProfileResponse>();
+
+            profile.Should().NotBeNull();
+            profile!.Id.Should().Be(profileId);
+            profile.UserId.Should().Be(authResult.UserId);
+            profile.DisplayName.Should().Be("Updated Current Player");
+            profile.SkillLevel.Should().Be(PlayerSkillLevel.Advanced);
+            profile.City.Should().Be("Rotterdam");
+            profile.Bio.Should().Be("Updated current player profile.");
+        }
+
         private static async Task<AuthResponse> RegisterAndAuthorizeAsync(
             HttpClient client,
             string email)

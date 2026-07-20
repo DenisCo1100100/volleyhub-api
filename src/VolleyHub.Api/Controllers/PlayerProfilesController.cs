@@ -7,6 +7,7 @@ using VolleyHub.Application.PlayerProfiles.Queries.GetPlayerProfileById;
 using VolleyHub.Application.PlayerProfiles.Queries.GetPlayerProfiles;
 using VolleyHub.Application.PlayerProfiles.Queries.GetPlayerReliabilitySummary;
 using VolleyHub.Application.PlayerProfiles.Queries.GetCurrentPlayerProfile;
+using VolleyHub.Application.PlayerProfiles.Commands.UpdateCurrentPlayerProfile;
 using Microsoft.AspNetCore.Authorization;
 using VolleyHub.Domain.PlayerProfiles;
 
@@ -67,6 +68,23 @@ namespace VolleyHub.Api.Controllers
                 cancellationToken);
 
             return Ok(playerProfile);
+        }
+
+        [Authorize]
+        [HttpPut("me")]
+        public async Task<IActionResult> UpdateCurrentPlayerProfile(
+            UpdatePlayerProfileRequest request,
+            CancellationToken cancellationToken)
+        {
+            await _sender.Send(
+                new UpdateCurrentPlayerProfileCommand(
+                    request.DisplayName,
+                    request.SkillLevel,
+                    request.City,
+                    request.Bio),
+                cancellationToken);
+
+            return NoContent();
         }
 
         [Authorize]
