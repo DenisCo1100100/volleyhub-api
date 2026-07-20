@@ -3,6 +3,7 @@ using Moq;
 using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Application.Games.Queries.GetGames;
 using VolleyHub.Domain.Games;
+using VolleyHub.Domain.PlayerProfiles;
 
 namespace VolleyHub.Application.UnitTests.Games.Queries.GetGames
 {
@@ -11,7 +12,6 @@ namespace VolleyHub.Application.UnitTests.Games.Queries.GetGames
         [Fact]
         public async Task Handle_ShouldReturnGameDtos_WhenGamesExist()
         {
-            // Arrange
             var games = new List<Game>
             {
                 CreateGame(
@@ -26,19 +26,34 @@ namespace VolleyHub.Application.UnitTests.Games.Queries.GetGames
             };
 
             var gameRepositoryMock = new Mock<IGameRepository>();
+            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
+            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
 
             gameRepositoryMock
                 .Setup(repository => repository.GetListAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(games);
 
-            var handler = new GetGamesQueryHandler(gameRepositoryMock.Object);
+            currentUserServiceMock
+                .Setup(service => service.UserId)
+                .Returns((Guid?)null);
+
+            gameParticipantRepositoryMock
+                .Setup(repository => repository.GetByGameIdAsync(
+                    It.IsAny<Guid>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<GameParticipant>());
+
+            var handler = new GetGamesQueryHandler(
+                gameRepositoryMock.Object,
+                gameParticipantRepositoryMock.Object,
+                currentUserServiceMock.Object,
+                playerProfileRepositoryMock.Object);
 
             var query = new GetGamesQuery();
 
-            // Act
             var result = await handler.Handle(query, CancellationToken.None);
 
-            // Assert
             result.Should().HaveCount(2);
 
             result[0].Id.Should().Be(games[0].Id);
@@ -52,6 +67,10 @@ namespace VolleyHub.Application.UnitTests.Games.Queries.GetGames
             result[0].JoinPolicy.Should().Be(games[0].JoinPolicy);
             result[0].Description.Should().Be(games[0].Description);
             result[0].Status.Should().Be(games[0].Status);
+            result[0].ApprovedParticipantCount.Should().Be(0);
+            result[0].PendingParticipantCount.Should().Be(0);
+            result[0].AvailableSpots.Should().Be(games[0].MaxPlayers);
+            result[0].CurrentUserJoinStatus.Should().BeNull();
 
             result[1].Id.Should().Be(games[1].Id);
             result[1].OrganizerId.Should().Be(games[1].OrganizerId);
@@ -64,35 +83,158 @@ namespace VolleyHub.Application.UnitTests.Games.Queries.GetGames
             result[1].JoinPolicy.Should().Be(games[1].JoinPolicy);
             result[1].Description.Should().Be(games[1].Description);
             result[1].Status.Should().Be(games[1].Status);
+            result[1].ApprovedParticipantCount.Should().Be(0);
+            result[1].PendingParticipantCount.Should().Be(0);
+            result[1].AvailableSpots.Should().Be(games[1].MaxPlayers);
+            result[1].CurrentUserJoinStatus.Should().BeNull();
 
             gameRepositoryMock.Verify(
                 repository => repository.GetListAsync(It.IsAny<CancellationToken>()),
+                Times.Once);
+
+            gameParticipantRepositoryMock.Verify(
+                repository => repository.GetByGameIdAsync(
+                    It.IsAny<Guid>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Exactly(2));
+
+            playerProfileRepositoryMock.Verify(
+                repository => repository.GetByUserIdAsync(
+                    It.IsAny<Guid>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task Handle_ShouldReturnParticipantSummaryAndCurrentUserJoinStatus_WhenParticipantsExist()
+        {
+            var currentUserId = Guid.NewGuid();
+
+            var currentPlayerProfile = PlayerProfile.Create(
+                userId: currentUserId,
+                displayName: "Current Player",
+                skillLevel: PlayerSkillLevel.Intermediate,
+                city: "Amsterdam",
+                bio: "Current player profile.");
+
+            var game = CreateGame(
+                startsAt: DateTimeOffset.UtcNow.AddDays(1),
+                maxPlayers: 12,
+                description: "Evening volleyball game");
+
+            var approvedParticipant = GameParticipant.JoinOpenGame(
+                gameId: game.Id,
+                playerProfileId: Guid.NewGuid(),
+                joinedAt: DateTimeOffset.UtcNow,
+                offlinePaymentStatus: GameParticipantOfflinePaymentStatus.NotRequired);
+
+            var pendingCurrentUserParticipant = GameParticipant.RequestToJoin(
+                gameId: game.Id,
+                playerProfileId: currentPlayerProfile.Id,
+                joinedAt: DateTimeOffset.UtcNow,
+                offlinePaymentStatus: GameParticipantOfflinePaymentStatus.NotRequired);
+
+            var rejectedParticipant = GameParticipant.RequestToJoin(
+                gameId: game.Id,
+                playerProfileId: Guid.NewGuid(),
+                joinedAt: DateTimeOffset.UtcNow,
+                offlinePaymentStatus: GameParticipantOfflinePaymentStatus.NotRequired);
+
+            rejectedParticipant.Reject();
+
+            var participants = new List<GameParticipant>
+    {
+        approvedParticipant,
+        pendingCurrentUserParticipant,
+        rejectedParticipant
+    };
+
+            var gameRepositoryMock = new Mock<IGameRepository>();
+            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
+            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+
+            gameRepositoryMock
+                .Setup(repository => repository.GetListAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<Game> { game });
+
+            currentUserServiceMock
+                .Setup(service => service.UserId)
+                .Returns(currentUserId);
+
+            playerProfileRepositoryMock
+                .Setup(repository => repository.GetByUserIdAsync(
+                    currentUserId,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(currentPlayerProfile);
+
+            gameParticipantRepositoryMock
+                .Setup(repository => repository.GetByGameIdAsync(
+                    game.Id,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(participants);
+
+            var handler = new GetGamesQueryHandler(
+                gameRepositoryMock.Object,
+                gameParticipantRepositoryMock.Object,
+                currentUserServiceMock.Object,
+                playerProfileRepositoryMock.Object);
+
+            var result = await handler.Handle(new GetGamesQuery(), CancellationToken.None);
+
+            result.Should().HaveCount(1);
+
+            result[0].ApprovedParticipantCount.Should().Be(1);
+            result[0].PendingParticipantCount.Should().Be(1);
+            result[0].AvailableSpots.Should().Be(11);
+            result[0].CurrentUserJoinStatus.Should().Be(GameParticipantJoinStatus.PendingApproval);
+
+            playerProfileRepositoryMock.Verify(
+                repository => repository.GetByUserIdAsync(
+                    currentUserId,
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
+
+            gameParticipantRepositoryMock.Verify(
+                repository => repository.GetByGameIdAsync(
+                    game.Id,
+                    It.IsAny<CancellationToken>()),
                 Times.Once);
         }
 
         [Fact]
         public async Task Handle_ShouldReturnEmptyList_WhenGamesDoNotExist()
         {
-            // Arrange
             var gameRepositoryMock = new Mock<IGameRepository>();
+            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
+            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
 
             gameRepositoryMock
                 .Setup(repository => repository.GetListAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<Game>());
 
-            var handler = new GetGamesQueryHandler(gameRepositoryMock.Object);
+            var handler = new GetGamesQueryHandler(
+                gameRepositoryMock.Object,
+                gameParticipantRepositoryMock.Object,
+                currentUserServiceMock.Object,
+                playerProfileRepositoryMock.Object);
 
             var query = new GetGamesQuery();
 
-            // Act
             var result = await handler.Handle(query, CancellationToken.None);
 
-            // Assert
             result.Should().BeEmpty();
 
             gameRepositoryMock.Verify(
                 repository => repository.GetListAsync(It.IsAny<CancellationToken>()),
                 Times.Once);
+
+            gameParticipantRepositoryMock.Verify(
+                repository => repository.GetByGameIdAsync(
+                    It.IsAny<Guid>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Never);
         }
 
         private static Game CreateGame(

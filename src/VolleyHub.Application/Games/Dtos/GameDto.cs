@@ -14,6 +14,10 @@ namespace VolleyHub.Application.Games.Dtos
         GameJoinPolicy JoinPolicy,
         string? Description,
         GameStatus Status,
+        int ApprovedParticipantCount,
+        int PendingParticipantCount,
+        int AvailableSpots,
+        GameParticipantJoinStatus? CurrentUserJoinStatus,
         DateTimeOffset CreatedAt,
         DateTimeOffset? UpdatedAt);
 }
