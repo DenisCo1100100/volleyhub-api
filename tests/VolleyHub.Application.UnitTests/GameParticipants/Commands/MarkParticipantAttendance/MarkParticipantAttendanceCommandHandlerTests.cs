@@ -3,6 +3,7 @@ using Moq;
 using VolleyHub.Application.Common.Exceptions;
 using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Application.GameParticipants.Commands.MarkParticipantAttendance;
+using VolleyHub.Domain.Common;
 using VolleyHub.Domain.Games;
 using VolleyHub.Domain.PlayerProfiles;
 
@@ -381,7 +382,7 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.MarkParticip
         }
 
         [Fact]
-        public async Task Handle_ShouldThrowInvalidOperationException_WhenGameIsNotCompleted()
+        public async Task Handle_ShouldThrowBusinessRuleException_WhenGameIsNotCompleted()
         {
             var currentUserId = Guid.NewGuid();
             var organizerProfile = CreatePlayerProfile(currentUserId);
@@ -426,7 +427,7 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.MarkParticip
 
             Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
 
-            await act.Should().ThrowAsync<InvalidOperationException>();
+            await act.Should().ThrowAsync<BusinessRuleException>();
 
             gameParticipantRepositoryMock.Verify(
                 repository => repository.Update(It.IsAny<GameParticipant>()),
@@ -438,7 +439,7 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.MarkParticip
         }
 
         [Fact]
-        public async Task Handle_ShouldThrowInvalidOperationException_WhenParticipantIsNotApproved()
+        public async Task Handle_ShouldThrowBusinessRuleException_WhenParticipantIsNotApproved()
         {
             var currentUserId = Guid.NewGuid();
             var organizerProfile = CreatePlayerProfile(currentUserId);
@@ -483,7 +484,7 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.MarkParticip
 
             Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
 
-            await act.Should().ThrowAsync<InvalidOperationException>();
+            await act.Should().ThrowAsync<BusinessRuleException>();
 
             gameParticipantRepositoryMock.Verify(
                 repository => repository.Update(It.IsAny<GameParticipant>()),

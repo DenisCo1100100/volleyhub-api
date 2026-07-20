@@ -3,6 +3,7 @@ using VolleyHub.Application.Common.Exceptions;
 using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Domain.Games;
 using VolleyHub.Domain.PlayerProfiles;
+using VolleyHub.Domain.Common;
 
 namespace VolleyHub.Application.GameParticipants.Commands.JoinGame
 {
@@ -62,12 +63,12 @@ namespace VolleyHub.Application.GameParticipants.Commands.JoinGame
 
             if (game.Status is not GameStatus.Open)
             {
-                throw new InvalidOperationException("Only open games can be joined.");
+                throw new BusinessRuleException("Only open games can be joined.");
             }
 
             if (game.JoinPolicy is GameJoinPolicy.InviteOnly)
             {
-                throw new InvalidOperationException("Invite-only games cannot be joined directly.");
+                throw new BusinessRuleException("Invite-only games cannot be joined directly.");
             }
 
             var existingParticipant = await _gameParticipantRepository.GetByGameAndPlayerProfileIdAsync(
@@ -77,7 +78,7 @@ namespace VolleyHub.Application.GameParticipants.Commands.JoinGame
 
             if (existingParticipant is not null)
             {
-                throw new InvalidOperationException("Player has already joined this game.");
+                throw new BusinessRuleException("Player has already joined this game.");
             }
 
             var participants = await _gameParticipantRepository.GetByGameIdAsync(
@@ -108,7 +109,7 @@ namespace VolleyHub.Application.GameParticipants.Commands.JoinGame
                     now,
                     offlinePaymentStatus),
 
-                _ => throw new InvalidOperationException("Game join policy is invalid.")
+                _ => throw new BusinessRuleException("Game join policy is invalid.")
             };
 
             await _gameParticipantRepository.AddAsync(participant, cancellationToken);
@@ -126,7 +127,7 @@ namespace VolleyHub.Application.GameParticipants.Commands.JoinGame
         {
             if (approvedParticipantsCount >= game.MaxPlayers)
             {
-                throw new InvalidOperationException("Game is full.");
+                throw new BusinessRuleException("Game is full.");
             }
 
             var participant = GameParticipant.JoinOpenGame(

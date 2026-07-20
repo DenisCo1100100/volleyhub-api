@@ -2,6 +2,7 @@ using MediatR;
 using VolleyHub.Application.Common.Exceptions;
 using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Domain.PlayerProfiles;
+using VolleyHub.Domain.Common;
 
 namespace VolleyHub.Application.PlayerProfiles.Commands.CreatePlayerProfile
 {
@@ -38,7 +39,7 @@ namespace VolleyHub.Application.PlayerProfiles.Commands.CreatePlayerProfile
 
             if (existingProfile is not null)
             {
-                throw new InvalidOperationException("User already has a player profile.");
+                throw new BusinessRuleException("User already has a player profile.");
             }
 
             var playerProfile = PlayerProfile.Create(

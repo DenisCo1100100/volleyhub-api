@@ -69,7 +69,7 @@ namespace VolleyHub.Domain.Games
         {
             if (JoinStatus is not GameParticipantJoinStatus.PendingApproval)
             {
-                throw new InvalidOperationException("Only pending join requests can be approved.");
+                throw new BusinessRuleException("Only pending join requests can be approved.");
             }
 
             ValidateApprovedAt(approvedAt);
@@ -82,7 +82,7 @@ namespace VolleyHub.Domain.Games
         {
             if (JoinStatus is not GameParticipantJoinStatus.PendingApproval)
             {
-                throw new InvalidOperationException("Only pending join requests can be rejected.");
+                throw new BusinessRuleException("Only pending join requests can be rejected.");
             }
 
             JoinStatus = GameParticipantJoinStatus.Rejected;
@@ -92,12 +92,12 @@ namespace VolleyHub.Domain.Games
         {
             if (JoinStatus is GameParticipantJoinStatus.Rejected)
             {
-                throw new InvalidOperationException("Rejected join requests cannot be cancelled.");
+                throw new BusinessRuleException("Rejected join requests cannot be cancelled.");
             }
 
             if (JoinStatus is GameParticipantJoinStatus.Cancelled)
             {
-                throw new InvalidOperationException("Join request is already cancelled.");
+                throw new BusinessRuleException("Join request is already cancelled.");
             }
 
             JoinStatus = GameParticipantJoinStatus.Cancelled;
@@ -107,7 +107,7 @@ namespace VolleyHub.Domain.Games
         {
             if (JoinStatus is not GameParticipantJoinStatus.Approved)
             {
-                throw new InvalidOperationException("Only approved participants can have attendance marked.");
+                throw new BusinessRuleException("Only approved participants can have attendance marked.");
             }
 
             ValidateAttendanceStatus(attendanceStatus);
@@ -119,7 +119,7 @@ namespace VolleyHub.Domain.Games
         {
             if (OfflinePaymentStatus is GameParticipantOfflinePaymentStatus.NotRequired)
             {
-                throw new InvalidOperationException("Payment is not required for this participant.");
+                throw new BusinessRuleException("Payment is not required for this participant.");
             }
 
             OfflinePaymentStatus = GameParticipantOfflinePaymentStatus.Paid;

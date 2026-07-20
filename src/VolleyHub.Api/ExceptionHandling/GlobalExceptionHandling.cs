@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using VolleyHub.Application.Common.Exceptions;
+using VolleyHub.Domain.Common;
 
 namespace VolleyHub.Api.ExceptionHandling
 {
@@ -33,11 +34,11 @@ namespace VolleyHub.Api.ExceptionHandling
             httpContext.Response.StatusCode = problemDetails.Status
                 ?? StatusCodes.Status500InternalServerError;
 
-            httpContext.Response.ContentType = "application/problem+json";
-
             await httpContext.Response.WriteAsJsonAsync(
                 problemDetails,
-                cancellationToken);
+                options: null,
+                contentType: "application/problem+json",
+                cancellationToken: cancellationToken);
 
             return true;
         }
@@ -75,6 +76,15 @@ namespace VolleyHub.Api.ExceptionHandling
                         Status = StatusCodes.Status404NotFound,
                         Title = "Not found",
                         Detail = notFoundException.Message,
+                        Instance = httpContext.Request.Path
+                    },
+
+                BusinessRuleException businessRuleException =>
+                    new ProblemDetails
+                    {
+                        Status = StatusCodes.Status409Conflict,
+                        Title = "Conflict",
+                        Detail = businessRuleException.Message,
                         Instance = httpContext.Request.Path
                     },
 

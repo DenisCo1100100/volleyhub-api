@@ -3,6 +3,7 @@ using VolleyHub.Application.Common.Exceptions;
 using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Domain.Games;
 using VolleyHub.Domain.PlayerProfiles;
+using VolleyHub.Domain.Common;
 
 namespace VolleyHub.Application.GameParticipants.Commands.ApproveParticipant
 {
@@ -76,7 +77,7 @@ namespace VolleyHub.Application.GameParticipants.Commands.ApproveParticipant
 
             if (game.Status is not GameStatus.Open)
             {
-                throw new InvalidOperationException("Only open games can approve participants.");
+                throw new BusinessRuleException("Only open games can approve participants.");
             }
 
             var participants = await _gameParticipantRepository.GetByGameIdAsync(
@@ -88,7 +89,7 @@ namespace VolleyHub.Application.GameParticipants.Commands.ApproveParticipant
 
             if (approvedParticipantsCount >= game.MaxPlayers)
             {
-                throw new InvalidOperationException("Game is full.");
+                throw new BusinessRuleException("Game is full.");
             }
 
             participant.Approve(_dateTimeProvider.UtcNow);

@@ -3,6 +3,7 @@ using Moq;
 using VolleyHub.Application.Common.Exceptions;
 using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Application.PlayerProfiles.Commands.CreatePlayerProfile;
+using VolleyHub.Domain.Common;
 using VolleyHub.Domain.PlayerProfiles;
 
 namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.CreatePlayerProfile
@@ -109,7 +110,7 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.CreatePlayerPr
         }
 
         [Fact]
-        public async Task Handle_ShouldThrowInvalidOperationException_WhenCurrentUserAlreadyHasProfile()
+        public async Task Handle_ShouldThrowBusinessRuleException_WhenCurrentUserAlreadyHasProfile()
         {
             var existingProfile = CreatePlayerProfile();
 
@@ -140,7 +141,7 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Commands.CreatePlayerPr
 
             Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
 
-            await act.Should().ThrowAsync<InvalidOperationException>();
+            await act.Should().ThrowAsync<BusinessRuleException>();
 
             playerProfileRepositoryMock.Verify(
                 repository => repository.AddAsync(

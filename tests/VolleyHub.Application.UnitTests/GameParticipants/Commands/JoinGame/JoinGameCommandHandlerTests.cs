@@ -3,6 +3,7 @@ using Moq;
 using VolleyHub.Application.Common.Exceptions;
 using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Application.GameParticipants.Commands.JoinGame;
+using VolleyHub.Domain.Common;
 using VolleyHub.Domain.Games;
 using VolleyHub.Domain.PlayerProfiles;
 
@@ -463,7 +464,7 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.JoinGame
         }
 
         [Fact]
-        public async Task Handle_ShouldThrowInvalidOperationException_WhenGameIsInviteOnly()
+        public async Task Handle_ShouldThrowBusinessRuleException_WhenGameIsInviteOnly()
         {
             var currentUserId = Guid.NewGuid();
             var playerProfile = CreatePlayerProfile(currentUserId);
@@ -498,7 +499,7 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.JoinGame
 
             Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
 
-            await act.Should().ThrowAsync<InvalidOperationException>();
+            await act.Should().ThrowAsync<BusinessRuleException>();
 
             gameParticipantRepositoryMock.Verify(
                 repository => repository.AddAsync(
@@ -512,7 +513,7 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.JoinGame
         }
 
         [Fact]
-        public async Task Handle_ShouldThrowInvalidOperationException_WhenPlayerAlreadyJoinedGame()
+        public async Task Handle_ShouldThrowBusinessRuleException_WhenPlayerAlreadyJoinedGame()
         {
             var currentUserId = Guid.NewGuid();
             var playerProfile = CreatePlayerProfile(currentUserId);
@@ -560,7 +561,7 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.JoinGame
 
             Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
 
-            await act.Should().ThrowAsync<InvalidOperationException>();
+            await act.Should().ThrowAsync<BusinessRuleException>();
 
             gameParticipantRepositoryMock.Verify(
                 repository => repository.AddAsync(

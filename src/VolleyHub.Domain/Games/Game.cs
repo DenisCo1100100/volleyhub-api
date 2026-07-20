@@ -86,7 +86,7 @@ namespace VolleyHub.Domain.Games
         {
             if (Status is not GameStatus.Open)
             {
-                throw new InvalidOperationException("Only open games can be marked as full.");
+                throw new BusinessRuleException("Only open games can be marked as full.");
             }
 
             Status = GameStatus.Full;
@@ -96,7 +96,7 @@ namespace VolleyHub.Domain.Games
         {
             if (Status is not GameStatus.Full)
             {
-                throw new InvalidOperationException("Only full games can be reopened.");
+                throw new BusinessRuleException("Only full games can be reopened.");
             }
 
             Status = GameStatus.Open;
@@ -106,12 +106,12 @@ namespace VolleyHub.Domain.Games
         {
             if (Status is GameStatus.Cancelled)
             {
-                throw new InvalidOperationException("Game is already cancelled.");
+                throw new BusinessRuleException("Game is already cancelled.");
             }
 
             if (Status is GameStatus.Completed)
             {
-                throw new InvalidOperationException("Completed games cannot be cancelled.");
+                throw new BusinessRuleException("Completed games cannot be cancelled.");
             }
 
             Status = GameStatus.Cancelled;
@@ -121,7 +121,7 @@ namespace VolleyHub.Domain.Games
         {
             if (Status is not GameStatus.Open and not GameStatus.Full)
             {
-                throw new InvalidOperationException("Only open or full games can be completed.");
+                throw new BusinessRuleException("Only open or full games can be completed.");
             }
 
             Status = GameStatus.Completed;
@@ -163,7 +163,7 @@ namespace VolleyHub.Domain.Games
         {
             if (Status is not GameStatus.Draft and not GameStatus.Open)
             {
-                throw new InvalidOperationException("Only draft or open games can be changed.");
+                throw new BusinessRuleException("Only draft or open games can be changed.");
             }
         }
 
