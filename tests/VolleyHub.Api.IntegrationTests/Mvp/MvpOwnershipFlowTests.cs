@@ -21,6 +21,8 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
         [Fact]
         public async Task MvpFlow_ShouldApplyOwnershipRulesAcrossApi()
         {
+            var uniqueId = Guid.NewGuid().ToString("N");
+
             var anonymousClient = _factory.CreateClient();
 
             var createProfileWithoutTokenResponse = await anonymousClient.PostAsJsonAsync(
@@ -36,10 +38,14 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
             createProfileWithoutTokenResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 
             var organizerClient = _factory.CreateClient();
-            await RegisterAndAuthorizeAsync(organizerClient, "organizer@test.com");
+            await RegisterAndAuthorizeAsync(
+                organizerClient,
+                $"organizer-{uniqueId}@test.com");
 
             var playerClient = _factory.CreateClient();
-            await RegisterAndAuthorizeAsync(playerClient, "player@test.com");
+            await RegisterAndAuthorizeAsync(
+                playerClient,
+                $"player-{uniqueId}@test.com");
 
             var organizerProfileId = await CreatePlayerProfileAsync(
                 organizerClient,
@@ -53,7 +59,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
 
             playerProfileId.Should().NotBeEmpty();
 
-            var courtId = await CreateCourtAsync(anonymousClient);
+            var courtId = await CreateCourtAsync(organizerClient);
             courtId.Should().NotBeEmpty();
 
             var createGameWithoutTokenResponse = await anonymousClient.PostAsJsonAsync(
@@ -91,7 +97,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
             HttpClient client,
             string email)
         {
-            var password = "Password123!";
+            const string password = "Password123!";
 
             var registerResponse = await client.PostAsJsonAsync(
                 "/api/auth/register",

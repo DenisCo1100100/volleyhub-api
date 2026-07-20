@@ -23,14 +23,20 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
         {
             var uniqueId = Guid.NewGuid().ToString("N");
 
+            var setupClient = _factory.CreateClient();
+
+            await RegisterAndAuthorizeAsync(
+                setupClient,
+                $"profile-required-setup-{uniqueId}@test.com");
+
+            var courtId = await CreateCourtAsync(setupClient);
+            courtId.Should().NotBeEmpty();
+
             var clientWithoutProfile = _factory.CreateClient();
 
             await RegisterAndAuthorizeAsync(
                 clientWithoutProfile,
                 $"no-profile-{uniqueId}@test.com");
-
-            var courtId = await CreateCourtAsync();
-            courtId.Should().NotBeEmpty();
 
             var createGameResponse = await clientWithoutProfile.PostAsJsonAsync(
                 "/api/games",
@@ -112,10 +118,8 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
             response.StatusCode.Should().Be(HttpStatusCode.Created);
         }
 
-        private async Task<Guid> CreateCourtAsync()
+        private static async Task<Guid> CreateCourtAsync(HttpClient client)
         {
-            var client = _factory.CreateClient();
-
             var response = await client.PostAsJsonAsync(
                 "/api/courts",
                 new
