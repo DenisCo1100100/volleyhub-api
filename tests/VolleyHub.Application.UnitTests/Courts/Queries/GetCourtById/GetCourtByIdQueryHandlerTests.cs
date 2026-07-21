@@ -81,6 +81,7 @@ namespace VolleyHub.Application.UnitTests.Courts.Queries.GetCourtById
         private static Court CreateCourt()
         {
             return Court.Create(
+                ownerPlayerProfileId: Guid.NewGuid(),
                 name: "Central Beach Court",
                 address: "Kyiv, Hydropark",
                 latitude: 50.4547,

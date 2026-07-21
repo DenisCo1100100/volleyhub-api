@@ -1,12 +1,15 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using VolleyHub.Domain.Courts;
+using VolleyHub.Domain.PlayerProfiles;
 
 namespace VolleyHub.Infrastructure.Persistence.Configurations
 {
-    public sealed class CourtConfiguration : IEntityTypeConfiguration<Court>
+    public sealed class CourtConfiguration
+        : IEntityTypeConfiguration<Court>
     {
-        public void Configure(EntityTypeBuilder<Court> builder)
+        public void Configure(
+            EntityTypeBuilder<Court> builder)
         {
             builder.ToTable("courts");
 
@@ -14,6 +17,9 @@ namespace VolleyHub.Infrastructure.Persistence.Configurations
 
             builder.Property(court => court.Id)
                 .HasColumnName("id");
+
+            builder.Property(court => court.OwnerPlayerProfileId)
+                .HasColumnName("owner_player_profile_id");
 
             builder.Property(court => court.Name)
                 .HasColumnName("name")
@@ -58,9 +64,16 @@ namespace VolleyHub.Infrastructure.Persistence.Configurations
             builder.Property(court => court.UpdatedAt)
                 .HasColumnName("updated_at");
 
-            builder.HasQueryFilter(court => !court.IsDeleted);
+            builder.HasOne<PlayerProfile>()
+                .WithMany()
+                .HasForeignKey(court => court.OwnerPlayerProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasIndex(court => court.Name);
+            builder.HasQueryFilter(
+                court => !court.IsDeleted);
+
+            builder.HasIndex(
+                court => court.Name);
         }
     }
 }

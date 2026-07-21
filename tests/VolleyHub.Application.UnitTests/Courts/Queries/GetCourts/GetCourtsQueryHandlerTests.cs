@@ -15,6 +15,7 @@ namespace VolleyHub.Application.UnitTests.Courts.Queries.GetCourts
             var courts = new List<Court>
             {
                 Court.Create(
+                    ownerPlayerProfileId: Guid.NewGuid(),
                     name: "Central Beach Court",
                     address: "Kyiv, Hydropark",
                     latitude: 50.4547,
@@ -24,6 +25,7 @@ namespace VolleyHub.Application.UnitTests.Courts.Queries.GetCourts
                     description: "Public beach volleyball court"),
 
                 Court.Create(
+                    ownerPlayerProfileId: Guid.NewGuid(),
                     name: "Indoor Arena",
                     address: "Kyiv, Sports Complex",
                     latitude: 50.4501,

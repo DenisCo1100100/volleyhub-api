@@ -433,6 +433,7 @@ namespace VolleyHub.Application.UnitTests.Games.Commands.CreateGame
         private static Court CreateCourt()
         {
             return Court.Create(
+                ownerPlayerProfileId: Guid.NewGuid(),
                 name: "Test Court",
                 address: "Test Street 1",
                 latitude: 53.9,
