@@ -38,7 +38,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
                 clientWithoutProfile,
                 $"no-profile-{uniqueId}@test.com");
 
-            var createGameResponse = await clientWithoutProfile.PostAsJsonAsync(
+            var createGameResponse = await clientWithoutProfile.PostAsApiJsonAsync(
                 "/api/games",
                 CreateGamePayload(courtId));
 
@@ -52,13 +52,13 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
 
             await CreatePlayerProfileAsync(organizerClient);
 
-            var gameResponse = await organizerClient.PostAsJsonAsync(
+            var gameResponse = await organizerClient.PostAsApiJsonAsync(
                 "/api/games",
                 CreateGamePayload(courtId));
 
             gameResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
-            var gameId = await gameResponse.Content.ReadFromJsonAsync<Guid>();
+            var gameId = await gameResponse.Content.ReadFromApiJsonAsync<Guid>();
 
             var joinGameResponse = await clientWithoutProfile.PostAsync(
                 $"/api/games/{gameId}/participants",
@@ -73,7 +73,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
         {
             const string password = "Password123!";
 
-            var registerResponse = await client.PostAsJsonAsync(
+            var registerResponse = await client.PostAsApiJsonAsync(
                 "/api/auth/register",
                 new
                 {
@@ -83,7 +83,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
 
             registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            var loginResponse = await client.PostAsJsonAsync(
+            var loginResponse = await client.PostAsApiJsonAsync(
                 "/api/auth/login",
                 new
                 {
@@ -93,7 +93,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
 
             loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            var authResult = await loginResponse.Content.ReadFromJsonAsync<AuthResponse>();
+            var authResult = await loginResponse.Content.ReadFromApiJsonAsync<AuthResponse>();
 
             authResult.Should().NotBeNull();
             authResult!.AccessToken.Should().NotBeNullOrWhiteSpace();
@@ -105,7 +105,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
 
         private static async Task CreatePlayerProfileAsync(HttpClient client)
         {
-            var response = await client.PostAsJsonAsync(
+            var response = await client.PostAsApiJsonAsync(
                 "/api/player-profiles",
                 new
                 {
@@ -120,7 +120,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
 
         private static async Task<Guid> CreateCourtAsync(HttpClient client)
         {
-            var response = await client.PostAsJsonAsync(
+            var response = await client.PostAsApiJsonAsync(
                 "/api/courts",
                 new
                 {
@@ -135,7 +135,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
 
             response.StatusCode.Should().Be(HttpStatusCode.Created);
 
-            return await response.Content.ReadFromJsonAsync<Guid>();
+            return await response.Content.ReadFromApiJsonAsync<Guid>();
         }
 
         private static object CreateGamePayload(Guid courtId)

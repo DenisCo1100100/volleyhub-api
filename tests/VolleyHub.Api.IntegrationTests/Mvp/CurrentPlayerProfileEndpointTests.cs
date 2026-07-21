@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using VolleyHub.Api.IntegrationTests.Common;
 using VolleyHub.Domain.PlayerProfiles;
+using System.Text.Json;
 
 namespace VolleyHub.Api.IntegrationTests.Mvp
 {
@@ -59,7 +60,18 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            var profile = await response.Content.ReadFromJsonAsync<PlayerProfileResponse>();
+			var responseJson = await response.Content.ReadAsStringAsync();
+
+			using var jsonDocument = JsonDocument.Parse(responseJson);
+
+			var skillLevelProperty = jsonDocument.RootElement
+				.GetProperty("skillLevel");
+
+			skillLevelProperty.ValueKind.Should().Be(JsonValueKind.String);
+			skillLevelProperty.GetString().Should()
+				.Be(nameof(PlayerSkillLevel.Intermediate));
+
+			var profile = await response.Content.ReadFromApiJsonAsync<PlayerProfileResponse>();
 
             profile.Should().NotBeNull();
             profile!.Id.Should().Be(profileId);
@@ -75,7 +87,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
         {
             var client = _factory.CreateClient();
 
-            var response = await client.PutAsJsonAsync(
+            var response = await client.PutAsApiJsonAsync(
                 "/api/player-profiles/me",
                 new
                 {
@@ -99,7 +111,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
                 client,
                 $"update-me-no-profile-{uniqueId}@test.com");
 
-            var response = await client.PutAsJsonAsync(
+            var response = await client.PutAsApiJsonAsync(
                 "/api/player-profiles/me",
                 new
                 {
@@ -125,7 +137,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
 
             var profileId = await CreatePlayerProfileAsync(client);
 
-            var updateResponse = await client.PutAsJsonAsync(
+            var updateResponse = await client.PutAsApiJsonAsync(
                 "/api/player-profiles/me",
                 new
                 {
@@ -141,7 +153,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
 
             getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            var profile = await getResponse.Content.ReadFromJsonAsync<PlayerProfileResponse>();
+            var profile = await getResponse.Content.ReadFromApiJsonAsync<PlayerProfileResponse>();
 
             profile.Should().NotBeNull();
             profile!.Id.Should().Be(profileId);
@@ -158,7 +170,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
         {
             const string password = "Password123!";
 
-            var registerResponse = await client.PostAsJsonAsync(
+            var registerResponse = await client.PostAsApiJsonAsync(
                 "/api/auth/register",
                 new
                 {
@@ -168,7 +180,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
 
             registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            var loginResponse = await client.PostAsJsonAsync(
+            var loginResponse = await client.PostAsApiJsonAsync(
                 "/api/auth/login",
                 new
                 {
@@ -178,7 +190,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
 
             loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            var authResult = await loginResponse.Content.ReadFromJsonAsync<AuthResponse>();
+            var authResult = await loginResponse.Content.ReadFromApiJsonAsync<AuthResponse>();
 
             authResult.Should().NotBeNull();
             authResult!.AccessToken.Should().NotBeNullOrWhiteSpace();
@@ -203,7 +215,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
 
             await CreatePlayerProfileAsync(client);
 
-            var response = await client.PostAsJsonAsync(
+            var response = await client.PostAsApiJsonAsync(
                 "/api/player-profiles",
                 new
                 {
@@ -219,7 +231,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
                 .Be("application/problem+json");
 
             var problemDetails = await response.Content
-                .ReadFromJsonAsync<ProblemDetailsResponse>();
+                .ReadFromApiJsonAsync<ProblemDetailsResponse>();
 
             problemDetails.Should().NotBeNull();
             problemDetails!.Status.Should().Be((int)HttpStatusCode.Conflict);
@@ -230,9 +242,36 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
                 .Be("/api/player-profiles");
         }
 
-        private static async Task<Guid> CreatePlayerProfileAsync(HttpClient client)
+		[Fact]
+		public async Task CreatePlayerProfile_ShouldReturnBadRequest_WhenSkillLevelIsNumeric()
+		{
+			var uniqueId = Guid.NewGuid().ToString("N");
+
+			var client = _factory.CreateClient();
+
+			await RegisterAndAuthorizeAsync(
+				client,
+				$"numeric-skill-level-{uniqueId}@test.com");
+
+			using var content = JsonContent.Create(
+				new
+				{
+					DisplayName = "Numeric Enum Player",
+					SkillLevel = (int)PlayerSkillLevel.Intermediate,
+					City = "Amsterdam",
+					Bio = "Numeric enum request."
+				});
+
+			var response = await client.PostAsync(
+				"/api/player-profiles",
+				content);
+
+			response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+		}
+
+		private static async Task<Guid> CreatePlayerProfileAsync(HttpClient client)
         {
-            var response = await client.PostAsJsonAsync(
+            var response = await client.PostAsApiJsonAsync(
                 "/api/player-profiles",
                 new
                 {
@@ -244,7 +283,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
 
             response.StatusCode.Should().Be(HttpStatusCode.Created);
 
-            return await response.Content.ReadFromJsonAsync<Guid>();
+            return await response.Content.ReadFromApiJsonAsync<Guid>();
         }
 
         private sealed record AuthResponse(
