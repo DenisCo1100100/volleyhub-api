@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using VolleyHub.Domain.Games;
+using VolleyHub.Domain.Courts;
+using VolleyHub.Domain.PlayerProfiles;
 
 namespace VolleyHub.Infrastructure.Persistence.Configurations
 {
@@ -67,6 +69,16 @@ namespace VolleyHub.Infrastructure.Persistence.Configurations
 
             builder.Property(game => game.UpdatedAt)
                 .HasColumnName("updated_at");
+
+            builder.HasOne<Court>()
+                .WithMany()
+                .HasForeignKey(game => game.CourtId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasOne<PlayerProfile>()
+                .WithMany()
+                .HasForeignKey(game => game.OrganizerId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasIndex(game => game.OrganizerId);
             builder.HasIndex(game => game.CourtId);
