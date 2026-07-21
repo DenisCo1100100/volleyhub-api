@@ -22,11 +22,11 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
             var client = _factory.CreateClient();
             var courtId = Guid.NewGuid();
 
-            var createResponse = await client.PostAsJsonAsync(
+            var createResponse = await client.PostAsApiJsonAsync(
                 "/api/courts",
                 CreateCourtPayload("Anonymous Create Court"));
 
-            var updateResponse = await client.PutAsJsonAsync(
+            var updateResponse = await client.PutAsApiJsonAsync(
                 $"/api/courts/{courtId}",
                 UpdateCourtPayload(courtId, "Anonymous Update Court"));
 
@@ -50,7 +50,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
 
             var courtId = await CreateCourtAsync(client);
 
-            var updateResponse = await client.PutAsJsonAsync(
+            var updateResponse = await client.PutAsApiJsonAsync(
                 $"/api/courts/{courtId}",
                 UpdateCourtPayload(courtId, "Updated Court"));
 
@@ -89,7 +89,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
         {
             const string password = "Password123!";
 
-            var registerResponse = await client.PostAsJsonAsync(
+            var registerResponse = await client.PostAsApiJsonAsync(
                 "/api/auth/register",
                 new
                 {
@@ -99,7 +99,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
 
             registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            var loginResponse = await client.PostAsJsonAsync(
+            var loginResponse = await client.PostAsApiJsonAsync(
                 "/api/auth/login",
                 new
                 {
@@ -109,7 +109,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
 
             loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            var authResult = await loginResponse.Content.ReadFromJsonAsync<AuthResponse>();
+            var authResult = await loginResponse.Content.ReadFromApiJsonAsync<AuthResponse>();
 
             authResult.Should().NotBeNull();
             authResult!.AccessToken.Should().NotBeNullOrWhiteSpace();
@@ -121,13 +121,13 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
 
         private static async Task<Guid> CreateCourtAsync(HttpClient client)
         {
-            var response = await client.PostAsJsonAsync(
+            var response = await client.PostAsApiJsonAsync(
                 "/api/courts",
                 CreateCourtPayload("Authorized Court"));
 
             response.StatusCode.Should().Be(HttpStatusCode.Created);
 
-            return await response.Content.ReadFromJsonAsync<Guid>();
+            return await response.Content.ReadFromApiJsonAsync<Guid>();
         }
 
         private static object CreateCourtPayload(string name)

@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
+using System.Text.Json;
 using FluentAssertions;
 using VolleyHub.Api.IntegrationTests.Common;
 using VolleyHub.Domain.Courts;
@@ -9,11 +9,13 @@ using VolleyHub.Domain.PlayerProfiles;
 
 namespace VolleyHub.Api.IntegrationTests.Mvp
 {
-    public sealed class GameSummaryEndpointTests : IClassFixture<CustomWebApplicationFactory>
+    public sealed class GameSummaryEndpointTests
+        : IClassFixture<CustomWebApplicationFactory>
     {
         private readonly CustomWebApplicationFactory _factory;
 
-        public GameSummaryEndpointTests(CustomWebApplicationFactory factory)
+        public GameSummaryEndpointTests(
+            CustomWebApplicationFactory factory)
         {
             _factory = factory;
         }
@@ -24,6 +26,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
             var uniqueId = Guid.NewGuid().ToString("N");
 
             var organizerClient = _factory.CreateClient();
+
             await RegisterAndAuthorizeAsync(
                 organizerClient,
                 $"game-summary-organizer-{uniqueId}@test.com");
@@ -33,6 +36,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
                 "Game Summary Organizer");
 
             var approvedPlayerClient = _factory.CreateClient();
+
             await RegisterAndAuthorizeAsync(
                 approvedPlayerClient,
                 $"game-summary-approved-player-{uniqueId}@test.com");
@@ -42,6 +46,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
                 "Approved Player");
 
             var pendingPlayerClient = _factory.CreateClient();
+
             await RegisterAndAuthorizeAsync(
                 pendingPlayerClient,
                 $"game-summary-pending-player-{uniqueId}@test.com");
@@ -51,25 +56,36 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
                 "Pending Player");
 
             var courtId = await CreateCourtAsync(organizerClient);
-            var gameId = await CreateGameAsync(organizerClient, courtId);
 
-            var approvedParticipantId = await JoinGameAsync(approvedPlayerClient, gameId);
+            var gameId = await CreateGameAsync(
+                organizerClient,
+                courtId);
+
+            var approvedParticipantId = await JoinGameAsync(
+                approvedPlayerClient,
+                gameId);
 
             var approveResponse = await organizerClient.PostAsync(
                 $"/api/game-participants/{approvedParticipantId}/approve",
                 content: null);
 
-            approveResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+            approveResponse.StatusCode.Should()
+                .Be(HttpStatusCode.NoContent);
 
-            await JoinGameAsync(pendingPlayerClient, gameId);
+            await JoinGameAsync(
+                pendingPlayerClient,
+                gameId);
 
             var anonymousClient = _factory.CreateClient();
 
-            var response = await anonymousClient.GetAsync("/api/games");
+            var response = await anonymousClient.GetAsync(
+                "/api/games");
 
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            response.StatusCode.Should()
+                .Be(HttpStatusCode.OK);
 
-            var games = await response.Content.ReadFromJsonAsync<List<GameResponse>>();
+            var games = await response.Content
+                .ReadFromApiJsonAsync<List<GameResponse>>();
 
             games.Should().NotBeNull();
 
@@ -87,6 +103,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
             var uniqueId = Guid.NewGuid().ToString("N");
 
             var organizerClient = _factory.CreateClient();
+
             await RegisterAndAuthorizeAsync(
                 organizerClient,
                 $"game-summary-detail-organizer-{uniqueId}@test.com");
@@ -96,6 +113,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
                 "Game Summary Detail Organizer");
 
             var approvedPlayerClient = _factory.CreateClient();
+
             await RegisterAndAuthorizeAsync(
                 approvedPlayerClient,
                 $"game-summary-detail-approved-player-{uniqueId}@test.com");
@@ -105,6 +123,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
                 "Approved Detail Player");
 
             var pendingPlayerClient = _factory.CreateClient();
+
             await RegisterAndAuthorizeAsync(
                 pendingPlayerClient,
                 $"game-summary-detail-pending-player-{uniqueId}@test.com");
@@ -114,30 +133,120 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
                 "Pending Detail Player");
 
             var courtId = await CreateCourtAsync(organizerClient);
-            var gameId = await CreateGameAsync(organizerClient, courtId);
 
-            var approvedParticipantId = await JoinGameAsync(approvedPlayerClient, gameId);
+            var gameId = await CreateGameAsync(
+                organizerClient,
+                courtId);
+
+            var approvedParticipantId = await JoinGameAsync(
+                approvedPlayerClient,
+                gameId);
 
             var approveResponse = await organizerClient.PostAsync(
                 $"/api/game-participants/{approvedParticipantId}/approve",
                 content: null);
 
-            approveResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+            approveResponse.StatusCode.Should()
+                .Be(HttpStatusCode.NoContent);
 
-            await JoinGameAsync(pendingPlayerClient, gameId);
+            await JoinGameAsync(
+                pendingPlayerClient,
+                gameId);
 
-            var response = await pendingPlayerClient.GetAsync($"/api/games/{gameId}");
+            var response = await pendingPlayerClient.GetAsync(
+                $"/api/games/{gameId}");
 
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            response.StatusCode.Should()
+                .Be(HttpStatusCode.OK);
 
-            var game = await response.Content.ReadFromJsonAsync<GameResponse>();
+            var responseJson = await response.Content
+                .ReadAsStringAsync();
+
+            using var jsonDocument = JsonDocument.Parse(
+                responseJson);
+
+            var gameJson = jsonDocument.RootElement;
+
+            AssertStringEnum(
+                gameJson,
+                "requiredLevel",
+                nameof(GameLevel.Intermediate));
+
+            AssertStringEnum(
+                gameJson,
+                "joinPolicy",
+                nameof(GameJoinPolicy.ApprovalRequired));
+
+            AssertStringEnum(
+                gameJson,
+                "status",
+                nameof(GameStatus.Open));
+
+            AssertStringEnum(
+                gameJson,
+                "currentUserJoinStatus",
+                nameof(GameParticipantJoinStatus.PendingApproval));
+
+            var game = await response.Content
+                .ReadFromApiJsonAsync<GameResponse>();
 
             game.Should().NotBeNull();
             game!.Id.Should().Be(gameId);
             game.ApprovedParticipantCount.Should().Be(1);
             game.PendingParticipantCount.Should().Be(1);
             game.AvailableSpots.Should().Be(11);
-            game.CurrentUserJoinStatus.Should().Be(GameParticipantJoinStatus.PendingApproval);
+
+            game.CurrentUserJoinStatus.Should()
+                .Be(GameParticipantJoinStatus.PendingApproval);
+
+            var participantsResponse = await pendingPlayerClient.GetAsync(
+                $"/api/games/{gameId}/participants");
+
+            participantsResponse.StatusCode.Should()
+                .Be(HttpStatusCode.OK);
+
+            var participantsJson = await participantsResponse.Content
+                .ReadAsStringAsync();
+
+            using var participantsDocument = JsonDocument.Parse(
+                participantsJson);
+
+            var participants = participantsDocument.RootElement;
+
+            participants.GetArrayLength().Should()
+                .BeGreaterThan(0);
+
+            foreach (var participant in participants.EnumerateArray())
+            {
+                participant
+                    .GetProperty("joinStatus")
+                    .ValueKind.Should()
+                    .Be(JsonValueKind.String);
+
+                participant
+                    .GetProperty("attendanceStatus")
+                    .ValueKind.Should()
+                    .Be(JsonValueKind.String);
+
+                participant
+                    .GetProperty("offlinePaymentStatus")
+                    .ValueKind.Should()
+                    .Be(JsonValueKind.String);
+            }
+        }
+
+        private static void AssertStringEnum(
+            JsonElement jsonElement,
+            string propertyName,
+            string expectedValue)
+        {
+            var property = jsonElement.GetProperty(propertyName);
+
+            property.ValueKind.Should()
+                .Be(JsonValueKind.String);
+
+            property.GetString().Should()
+                .Be(expectedValue);
         }
 
         private static async Task RegisterAndAuthorizeAsync(
@@ -146,7 +255,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
         {
             const string password = "Password123!";
 
-            var registerResponse = await client.PostAsJsonAsync(
+            var registerResponse = await client.PostAsApiJsonAsync(
                 "/api/auth/register",
                 new
                 {
@@ -154,9 +263,10 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
                     Password = password
                 });
 
-            registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            registerResponse.StatusCode.Should()
+                .Be(HttpStatusCode.OK);
 
-            var loginResponse = await client.PostAsJsonAsync(
+            var loginResponse = await client.PostAsApiJsonAsync(
                 "/api/auth/login",
                 new
                 {
@@ -164,23 +274,28 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
                     Password = password
                 });
 
-            loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            loginResponse.StatusCode.Should()
+                .Be(HttpStatusCode.OK);
 
-            var authResult = await loginResponse.Content.ReadFromJsonAsync<AuthResponse>();
+            var authResult = await loginResponse.Content
+                .ReadFromApiJsonAsync<AuthResponse>();
 
             authResult.Should().NotBeNull();
-            authResult!.AccessToken.Should().NotBeNullOrWhiteSpace();
 
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-                "Bearer",
-                authResult.AccessToken);
+            authResult!.AccessToken.Should()
+                .NotBeNullOrWhiteSpace();
+
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue(
+                    "Bearer",
+                    authResult.AccessToken);
         }
 
         private static async Task<Guid> CreatePlayerProfileAsync(
             HttpClient client,
             string displayName)
         {
-            var response = await client.PostAsJsonAsync(
+            var response = await client.PostAsApiJsonAsync(
                 "/api/player-profiles",
                 new
                 {
@@ -190,14 +305,17 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
                     Bio = "Integration test profile."
                 });
 
-            response.StatusCode.Should().Be(HttpStatusCode.Created);
+            response.StatusCode.Should()
+                .Be(HttpStatusCode.Created);
 
-            return await response.Content.ReadFromJsonAsync<Guid>();
+            return await response.Content
+                .ReadFromApiJsonAsync<Guid>();
         }
 
-        private static async Task<Guid> CreateCourtAsync(HttpClient client)
+        private static async Task<Guid> CreateCourtAsync(
+            HttpClient client)
         {
-            var response = await client.PostAsJsonAsync(
+            var response = await client.PostAsApiJsonAsync(
                 "/api/courts",
                 new
                 {
@@ -207,25 +325,30 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
                     Longitude = 4.9041,
                     SurfaceType = CourtSurfaceType.Indoor,
                     IsIndoor = true,
-                    Description = "Court created by game summary integration test."
+                    Description =
+                        "Court created by game summary integration test."
                 });
 
-            response.StatusCode.Should().Be(HttpStatusCode.Created);
+            response.StatusCode.Should()
+                .Be(HttpStatusCode.Created);
 
-            return await response.Content.ReadFromJsonAsync<Guid>();
+            return await response.Content
+                .ReadFromApiJsonAsync<Guid>();
         }
 
         private static async Task<Guid> CreateGameAsync(
             HttpClient client,
             Guid courtId)
         {
-            var response = await client.PostAsJsonAsync(
+            var response = await client.PostAsApiJsonAsync(
                 "/api/games",
                 CreateGamePayload(courtId));
 
-            response.StatusCode.Should().Be(HttpStatusCode.Created);
+            response.StatusCode.Should()
+                .Be(HttpStatusCode.Created);
 
-            return await response.Content.ReadFromJsonAsync<Guid>();
+            return await response.Content
+                .ReadFromApiJsonAsync<Guid>();
         }
 
         private static async Task<Guid> JoinGameAsync(
@@ -236,12 +359,15 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
                 $"/api/games/{gameId}/participants",
                 content: null);
 
-            response.StatusCode.Should().Be(HttpStatusCode.Created);
+            response.StatusCode.Should()
+                .Be(HttpStatusCode.Created);
 
-            return await response.Content.ReadFromJsonAsync<Guid>();
+            return await response.Content
+                .ReadFromApiJsonAsync<Guid>();
         }
 
-        private static object CreateGamePayload(Guid courtId)
+        private static object CreateGamePayload(
+            Guid courtId)
         {
             var startsAt = DateTimeOffset.UtcNow.AddDays(1);
 
