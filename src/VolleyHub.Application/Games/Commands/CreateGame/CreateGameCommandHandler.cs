@@ -3,6 +3,7 @@ using VolleyHub.Application.Common.Exceptions;
 using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Domain.Games;
 using VolleyHub.Domain.PlayerProfiles;
+using VolleyHub.Domain.Courts;
 
 namespace VolleyHub.Application.Games.Commands.CreateGame
 {
@@ -12,14 +13,17 @@ namespace VolleyHub.Application.Games.Commands.CreateGame
         private readonly IPlayerProfileRepository _playerProfileRepository;
         private readonly ICurrentUserService _currentUserService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICourtRepository _courtRepository;
 
         public CreateGameCommandHandler(
             IGameRepository gameRepository,
+            ICourtRepository courtRepository,
             IPlayerProfileRepository playerProfileRepository,
             ICurrentUserService currentUserService,
             IUnitOfWork unitOfWork)
         {
             _gameRepository = gameRepository;
+            _courtRepository = courtRepository;
             _playerProfileRepository = playerProfileRepository;
             _currentUserService = currentUserService;
             _unitOfWork = unitOfWork;
@@ -43,6 +47,17 @@ namespace VolleyHub.Application.Games.Commands.CreateGame
             if (organizerProfile is null || organizerProfile.IsDeleted)
             {
                 throw new NotFoundException(nameof(PlayerProfile), currentUserId.Value);
+            }
+
+            var court = await _courtRepository.GetByIdAsync(
+                request.CourtId,
+                cancellationToken);
+
+            if (court is null || court.IsDeleted)
+            {
+                throw new NotFoundException(
+                    nameof(Court),
+                    request.CourtId);
             }
 
             var game = Game.Create(
