@@ -1,7 +1,7 @@
 ﻿using MediatR;
-using VolleyHub.Application.Games.Dtos;
+using VolleyHub.Application.Games.Common;
 
 namespace VolleyHub.Application.Games.Queries.GetGameById
 {
-    public sealed record GetGameByIdQuery(Guid Id) : IRequest<GameDto>;
+    public sealed record GetGameByIdQuery(Guid Id) : IRequest<GameDetailsDto>;
 }

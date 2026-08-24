@@ -1,23 +1,23 @@
-﻿using VolleyHub.Application.GameParticipants.Dtos;
+﻿using VolleyHub.Application.GameParticipants.Common;
 using VolleyHub.Domain.Games;
+using VolleyHub.Domain.PlayerProfiles;
 
 namespace VolleyHub.Application.GameParticipants.Mappings
 {
     public static class GameParticipantMappingExtensions
     {
-        public static GameParticipantDto ToDto(this GameParticipant participant)
+        public static GameParticipantSummaryDto ToSummaryDto(this GameParticipant participant, PlayerProfile playerProfile)
         {
-            return new GameParticipantDto(
+            return new GameParticipantSummaryDto(
                 participant.Id,
-                participant.GameId,
                 participant.PlayerProfileId,
-                participant.JoinedAt,
-                participant.ApprovedAt,
+                playerProfile.DisplayName,
+                playerProfile.SkillLevel,
                 participant.JoinStatus,
                 participant.AttendanceStatus,
                 participant.OfflinePaymentStatus,
-                participant.CreatedAt,
-                participant.UpdatedAt);
+                participant.JoinedAt,
+                participant.ApprovedAt);
         }
     }
 }

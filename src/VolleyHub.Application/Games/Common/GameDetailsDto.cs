@@ -1,11 +1,12 @@
-﻿using VolleyHub.Domain.Games;
+using VolleyHub.Application.GameParticipants.Common;
+using VolleyHub.Domain.Games;
 
-namespace VolleyHub.Application.Games.Dtos
+namespace VolleyHub.Application.Games.Common
 {
-    public sealed record GameDto(
+    public sealed record GameDetailsDto(
         Guid Id,
-        Guid OrganizerId,
-        Guid CourtId,
+        GameCourtSummaryDto Court,
+        GameOrganizerSummaryDto Organizer,
         DateTimeOffset StartsAt,
         DateTimeOffset? EndsAt,
         int MaxPlayers,
@@ -18,6 +19,7 @@ namespace VolleyHub.Application.Games.Dtos
         int PendingParticipantCount,
         int AvailableSpots,
         GameParticipantJoinStatus? CurrentUserJoinStatus,
+        IReadOnlyList<GameParticipantSummaryDto> Participants,
         DateTimeOffset CreatedAt,
         DateTimeOffset? UpdatedAt);
 }
