@@ -1,7 +1,7 @@
 ﻿using MediatR;
-using VolleyHub.Application.Games.Dtos;
+using VolleyHub.Application.Games.Common;
 
 namespace VolleyHub.Application.Games.Queries.GetGames
 {
-    public sealed record GetGamesQuery : IRequest<IReadOnlyList<GameDto>>;
+    public sealed record GetGamesQuery : IRequest<IReadOnlyList<GameSummaryDto>>;
 }
