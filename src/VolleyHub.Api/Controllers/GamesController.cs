@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using VolleyHub.Application.Common.Models;
 using VolleyHub.Application.Games.Commands.CancelGame;
 using VolleyHub.Application.Games.Commands.CompleteGame;
 using VolleyHub.Application.Games.Commands.CreateGame;
@@ -24,9 +25,17 @@ namespace VolleyHub.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IReadOnlyList<GameSummaryDto>>> GetGames(CancellationToken cancellationToken)
+        public async Task<ActionResult<PagedResult<GameSummaryDto>>> GetGames([FromQuery] GetGamesRequest request, CancellationToken cancellationToken)
         {
-            var games = await _sender.Send(new GetGamesQuery(), cancellationToken);
+            var games = await _sender.Send(
+                new GetGamesQuery(
+                    request.Page,
+                    request.PageSize,
+                    request.StartsAtFrom,
+                    request.StartsAtTo,
+                    request.CourtId,
+                    request.Status),
+                cancellationToken);
 
             return Ok(games);
         }
@@ -98,6 +107,16 @@ namespace VolleyHub.Api.Controllers
 
             return NoContent();
         }
+    }
+
+    public sealed class GetGamesRequest
+    {
+        public int Page { get; init; } = 1;
+        public int PageSize { get; init; } = 20;
+        public DateTimeOffset? StartsAtFrom { get; init; }
+        public DateTimeOffset? StartsAtTo { get; init; }
+        public Guid? CourtId { get; init; }
+        public GameStatus? Status { get; init; }
     }
 
     public sealed record CreateGameRequest(
