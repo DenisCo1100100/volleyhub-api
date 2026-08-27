@@ -2,15 +2,15 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
+using System.Text.Json.Serialization;
 using VolleyHub.Api.ExceptionHandling;
+using VolleyHub.Api.Options;
 using VolleyHub.Api.Services;
 using VolleyHub.Api.Swagger;
 using VolleyHub.Application;
 using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Infrastructure;
 using VolleyHub.Infrastructure.Auth;
-using VolleyHub.Api.Options;
-using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,10 +37,14 @@ builder.Services.AddCors(options =>
             {
                 policy.WithOrigins(corsOptions.AllowedOrigins)
                     .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                    .WithHeaders("Authorization", "Content-Type");
+                    .WithHeaders("Authorization", "Content-Type")
+                    .AllowCredentials();
             }
         });
 });
+
+builder.Services.Configure<RefreshTokenCookieOptions>(
+    builder.Configuration.GetSection(RefreshTokenCookieOptions.SectionName));
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
