@@ -1,7 +1,9 @@
 ﻿using FluentAssertions;
 using Moq;
 using VolleyHub.Application.Auth.Commands.LoginUser;
+using VolleyHub.Application.Auth.Common;
 using VolleyHub.Application.Common.Interfaces;
+using VolleyHub.Domain.Auth;
 using VolleyHub.Domain.Users;
 
 namespace VolleyHub.Application.UnitTests.Auth.Commands.LoginUser
@@ -9,16 +11,23 @@ namespace VolleyHub.Application.UnitTests.Auth.Commands.LoginUser
     public sealed class LoginUserCommandHandlerTests
     {
         [Fact]
-        public async Task Handle_ShouldReturnAuthResult_WhenCredentialsAreValid()
+        public async Task Handle_ShouldCreateRefreshSessionAndReturnAuthResult_WhenCredentialsAreValid()
         {
-            // Arrange
             var user = User.Create(
                 "test@example.com",
                 "hashed-password");
 
+            var refreshTokenExpiresAt = DateTimeOffset.UtcNow.AddDays(30);
+
             var userRepositoryMock = new Mock<IUserRepository>();
+            var refreshTokenRepositoryMock = new Mock<IRefreshTokenRepository>();
             var passwordHasherMock = new Mock<IPasswordHasher>();
             var jwtTokenGeneratorMock = new Mock<IJwtTokenGenerator>();
+            var refreshTokenGeneratorMock = new Mock<IRefreshTokenGenerator>();
+            var unitOfWorkMock = new Mock<IUnitOfWork>();
+            var dateTimeProviderMock = new Mock<IDateTimeProvider>();
+
+            RefreshToken? addedRefreshToken = null;
 
             userRepositoryMock
                 .Setup(repository => repository.GetByEmailAsync(
@@ -36,47 +45,73 @@ namespace VolleyHub.Application.UnitTests.Auth.Commands.LoginUser
                 .Setup(generator => generator.GenerateToken(user))
                 .Returns("access-token");
 
+            refreshTokenGeneratorMock
+                .Setup(generator => generator.Generate())
+                .Returns(new GeneratedRefreshToken(
+                    "refresh-token",
+                    "refresh-token-hash",
+                    refreshTokenExpiresAt));
+
+            refreshTokenRepositoryMock
+                .Setup(repository => repository.AddAsync(
+                    It.IsAny<RefreshToken>(),
+                    It.IsAny<CancellationToken>()))
+                .Callback<RefreshToken, CancellationToken>((refreshToken, _) => addedRefreshToken = refreshToken)
+                .Returns(Task.CompletedTask);
+
+            unitOfWorkMock
+                .Setup(unitOfWork => unitOfWork.SaveChangesAsync(
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(1);
+
             var handler = new LoginUserCommandHandler(
                 userRepositoryMock.Object,
+                refreshTokenRepositoryMock.Object,
                 passwordHasherMock.Object,
-                jwtTokenGeneratorMock.Object);
+                jwtTokenGeneratorMock.Object,
+                refreshTokenGeneratorMock.Object,
+                dateTimeProviderMock.Object,
+                unitOfWorkMock.Object);
 
-            var command = new LoginUserCommand(
-                Email: "Test@Example.com",
-                Password: "password123");
+            var result = await handler.Handle(
+                new LoginUserCommand(
+                    Email: "Test@Example.com",
+                    Password: "password123"),
+                CancellationToken.None);
 
-            // Act
-            var result = await handler.Handle(command, CancellationToken.None);
-
-            // Assert
             result.UserId.Should().Be(user.Id);
             result.Email.Should().Be(user.Email);
             result.AccessToken.Should().Be("access-token");
+            result.RefreshToken.Should().Be("refresh-token");
+            result.RefreshTokenExpiresAt.Should().Be(refreshTokenExpiresAt);
 
-            userRepositoryMock.Verify(
-                repository => repository.GetByEmailAsync(
-                    "test@example.com",
+            addedRefreshToken.Should().NotBeNull();
+            addedRefreshToken!.UserId.Should().Be(user.Id);
+            addedRefreshToken.TokenHash.Should().Be("refresh-token-hash");
+            addedRefreshToken.ExpiresAt.Should().Be(refreshTokenExpiresAt);
+
+            refreshTokenRepositoryMock.Verify(
+                repository => repository.AddAsync(
+                    It.IsAny<RefreshToken>(),
                     It.IsAny<CancellationToken>()),
                 Times.Once);
 
-            passwordHasherMock.Verify(
-                hasher => hasher.Verify(
-                    "password123",
-                    user.PasswordHash),
-                Times.Once);
-
-            jwtTokenGeneratorMock.Verify(
-                generator => generator.GenerateToken(user),
+            unitOfWorkMock.Verify(
+                unitOfWork => unitOfWork.SaveChangesAsync(
+                    It.IsAny<CancellationToken>()),
                 Times.Once);
         }
 
         [Fact]
         public async Task Handle_ShouldThrowArgumentException_WhenUserDoesNotExist()
         {
-            // Arrange
             var userRepositoryMock = new Mock<IUserRepository>();
+            var refreshTokenRepositoryMock = new Mock<IRefreshTokenRepository>();
             var passwordHasherMock = new Mock<IPasswordHasher>();
             var jwtTokenGeneratorMock = new Mock<IJwtTokenGenerator>();
+            var refreshTokenGeneratorMock = new Mock<IRefreshTokenGenerator>();
+            var unitOfWorkMock = new Mock<IUnitOfWork>();
+            var dateTimeProviderMock = new Mock<IDateTimeProvider>();
 
             userRepositoryMock
                 .Setup(repository => repository.GetByEmailAsync(
@@ -86,17 +121,19 @@ namespace VolleyHub.Application.UnitTests.Auth.Commands.LoginUser
 
             var handler = new LoginUserCommandHandler(
                 userRepositoryMock.Object,
+                refreshTokenRepositoryMock.Object,
                 passwordHasherMock.Object,
-                jwtTokenGeneratorMock.Object);
+                jwtTokenGeneratorMock.Object,
+                refreshTokenGeneratorMock.Object,
+                dateTimeProviderMock.Object,
+                unitOfWorkMock.Object);
 
-            var command = new LoginUserCommand(
-                Email: "test@example.com",
-                Password: "password123");
+            Func<Task> act = async () => await handler.Handle(
+                new LoginUserCommand(
+                    Email: "test@example.com",
+                    Password: "password123"),
+                CancellationToken.None);
 
-            // Act
-            Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
-
-            // Assert
             await act.Should().ThrowAsync<ArgumentException>();
 
             passwordHasherMock.Verify(
@@ -105,22 +142,30 @@ namespace VolleyHub.Application.UnitTests.Auth.Commands.LoginUser
                     It.IsAny<string>()),
                 Times.Never);
 
-            jwtTokenGeneratorMock.Verify(
-                generator => generator.GenerateToken(It.IsAny<User>()),
+            refreshTokenGeneratorMock.Verify(
+                generator => generator.Generate(),
+                Times.Never);
+
+            unitOfWorkMock.Verify(
+                unitOfWork => unitOfWork.SaveChangesAsync(
+                    It.IsAny<CancellationToken>()),
                 Times.Never);
         }
 
         [Fact]
         public async Task Handle_ShouldThrowArgumentException_WhenPasswordIsInvalid()
         {
-            // Arrange
             var user = User.Create(
                 "test@example.com",
                 "hashed-password");
 
             var userRepositoryMock = new Mock<IUserRepository>();
+            var refreshTokenRepositoryMock = new Mock<IRefreshTokenRepository>();
             var passwordHasherMock = new Mock<IPasswordHasher>();
             var jwtTokenGeneratorMock = new Mock<IJwtTokenGenerator>();
+            var refreshTokenGeneratorMock = new Mock<IRefreshTokenGenerator>();
+            var unitOfWorkMock = new Mock<IUnitOfWork>();
+            var dateTimeProviderMock = new Mock<IDateTimeProvider>();
 
             userRepositoryMock
                 .Setup(repository => repository.GetByEmailAsync(
@@ -136,21 +181,34 @@ namespace VolleyHub.Application.UnitTests.Auth.Commands.LoginUser
 
             var handler = new LoginUserCommandHandler(
                 userRepositoryMock.Object,
+                refreshTokenRepositoryMock.Object,
                 passwordHasherMock.Object,
-                jwtTokenGeneratorMock.Object);
+                jwtTokenGeneratorMock.Object,
+                refreshTokenGeneratorMock.Object,
+                dateTimeProviderMock.Object,
+                unitOfWorkMock.Object);
 
-            var command = new LoginUserCommand(
-                Email: "test@example.com",
-                Password: "wrong-password");
+            Func<Task> act = async () => await handler.Handle(
+                new LoginUserCommand(
+                    Email: "test@example.com",
+                    Password: "wrong-password"),
+                CancellationToken.None);
 
-            // Act
-            Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
-
-            // Assert
             await act.Should().ThrowAsync<ArgumentException>();
 
-            jwtTokenGeneratorMock.Verify(
-                generator => generator.GenerateToken(It.IsAny<User>()),
+            refreshTokenGeneratorMock.Verify(
+                generator => generator.Generate(),
+                Times.Never);
+
+            refreshTokenRepositoryMock.Verify(
+                repository => repository.AddAsync(
+                    It.IsAny<RefreshToken>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Never);
+
+            unitOfWorkMock.Verify(
+                unitOfWork => unitOfWork.SaveChangesAsync(
+                    It.IsAny<CancellationToken>()),
                 Times.Never);
         }
     }

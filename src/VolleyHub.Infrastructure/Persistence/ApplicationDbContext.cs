@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using VolleyHub.Application.Common.Interfaces;
+using VolleyHub.Domain.Auth;
 using VolleyHub.Domain.Common;
 using VolleyHub.Domain.Courts;
 using VolleyHub.Domain.Games;
@@ -12,9 +13,7 @@ namespace VolleyHub.Infrastructure.Persistence
     {
         private readonly IDateTimeProvider _dateTimeProvider;
 
-        public ApplicationDbContext(
-            DbContextOptions<ApplicationDbContext> options,
-            IDateTimeProvider dateTimeProvider)
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IDateTimeProvider dateTimeProvider)
             : base(options)
         {
             _dateTimeProvider = dateTimeProvider;
@@ -24,6 +23,7 @@ namespace VolleyHub.Infrastructure.Persistence
         public DbSet<Game> Games => Set<Game>();
         public DbSet<GameParticipant> GameParticipants => Set<GameParticipant>();
         public DbSet<PlayerProfile> PlayerProfiles => Set<PlayerProfile>();
+        public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
         public DbSet<User> Users => Set<User>();
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

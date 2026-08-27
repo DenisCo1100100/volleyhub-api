@@ -20,10 +20,15 @@ namespace VolleyHub.Api.IntegrationTests.Common
 
             Environment.SetEnvironmentVariable("Jwt__Issuer", "VolleyHub");
             Environment.SetEnvironmentVariable("Jwt__Audience", "VolleyHub");
-            Environment.SetEnvironmentVariable("Jwt__ExpirationMinutes", "60");
+            Environment.SetEnvironmentVariable("Jwt__ExpirationMinutes", "15");
             Environment.SetEnvironmentVariable(
                 "Jwt__Secret",
                 "volleyhub-test-secret-key-change-me-please-1234567890");
+
+            Environment.SetEnvironmentVariable("RefreshToken__ExpirationDays", "30");
+            Environment.SetEnvironmentVariable("RefreshTokenCookie__Name", "volleyhub.refreshToken");
+            Environment.SetEnvironmentVariable("RefreshTokenCookie__Secure", "true");
+            Environment.SetEnvironmentVariable("RefreshTokenCookie__SameSite", "None");
 
             Environment.SetEnvironmentVariable(
                 "Cors__AllowedOrigins__0",
@@ -47,7 +52,9 @@ namespace VolleyHub.Api.IntegrationTests.Common
                 var serviceProvider = services.BuildServiceProvider();
 
                 using var scope = serviceProvider.CreateScope();
-                var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+                var dbContext = scope.ServiceProvider
+                    .GetRequiredService<ApplicationDbContext>();
 
                 dbContext.Database.EnsureDeleted();
                 dbContext.Database.EnsureCreated();
