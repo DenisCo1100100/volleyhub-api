@@ -31,6 +31,12 @@ namespace VolleyHub.Infrastructure.Persistence.Configurations
             builder.Property(participant => participant.ApprovedAt)
                 .HasColumnName("approved_at");
 
+            builder.Property(participant => participant.CancelledAt)
+                .HasColumnName("cancelled_at");
+
+            builder.Property(participant => participant.RemovedAt)
+                .HasColumnName("removed_at");
+
             builder.Property(participant => participant.JoinStatus)
                 .HasColumnName("join_status")
                 .HasConversion<string>()
@@ -48,6 +54,11 @@ namespace VolleyHub.Infrastructure.Persistence.Configurations
                 .HasConversion<string>()
                 .HasMaxLength(50)
                 .IsRequired();
+
+            builder.Property(participant => participant.CancellationType)
+                .HasColumnName("cancellation_type")
+                .HasConversion<string>()
+                .HasMaxLength(50);
 
             builder.Property(participant => participant.CreatedAt)
                 .HasColumnName("created_at")

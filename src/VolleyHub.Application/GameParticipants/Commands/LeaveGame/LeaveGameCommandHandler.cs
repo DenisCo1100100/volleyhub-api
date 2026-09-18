@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using VolleyHub.Application.Common.Exceptions;
 using VolleyHub.Application.Common.Interfaces;
+using VolleyHub.Domain.Common;
 using VolleyHub.Domain.Games;
 using VolleyHub.Domain.PlayerProfiles;
 
@@ -12,6 +13,7 @@ namespace VolleyHub.Application.GameParticipants.Commands.LeaveGame
         private readonly IGameParticipantRepository _gameParticipantRepository;
         private readonly IPlayerProfileRepository _playerProfileRepository;
         private readonly ICurrentUserService _currentUserService;
+        private readonly IDateTimeProvider _dateTimeProvider;
         private readonly IUnitOfWork _unitOfWork;
 
         public LeaveGameCommandHandler(
@@ -19,12 +21,14 @@ namespace VolleyHub.Application.GameParticipants.Commands.LeaveGame
             IGameParticipantRepository gameParticipantRepository,
             IPlayerProfileRepository playerProfileRepository,
             ICurrentUserService currentUserService,
+            IDateTimeProvider dateTimeProvider,
             IUnitOfWork unitOfWork)
         {
             _gameRepository = gameRepository;
             _gameParticipantRepository = gameParticipantRepository;
             _playerProfileRepository = playerProfileRepository;
             _currentUserService = currentUserService;
+            _dateTimeProvider = dateTimeProvider;
             _unitOfWork = unitOfWork;
         }
 
@@ -67,11 +71,27 @@ namespace VolleyHub.Application.GameParticipants.Commands.LeaveGame
                 throw new NotFoundException(nameof(Game), participant.GameId);
             }
 
-            var wasApproved = participant.JoinStatus is GameParticipantJoinStatus.Approved;
+            var releasedConfirmedPlace =
+                participant.JoinStatus is GameParticipantJoinStatus.Approved;
 
-            participant.Cancel();
+            switch (participant.JoinStatus)
+            {
+                case GameParticipantJoinStatus.PendingApproval:
+                    participant.WithdrawRequest();
+                    break;
 
-            if (wasApproved && game.Status is GameStatus.Full)
+                case GameParticipantJoinStatus.Approved:
+                    participant.CancelParticipation(
+                        _dateTimeProvider.UtcNow,
+                        game.StartsAt);
+                    break;
+
+                default:
+                    throw new BusinessRuleException(
+                        "Only pending or approved participants can leave a game.");
+            }
+
+            if (releasedConfirmedPlace && game.Status is GameStatus.Full)
             {
                 game.Reopen();
                 _gameRepository.Update(game);

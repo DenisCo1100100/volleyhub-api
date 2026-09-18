@@ -12,6 +12,7 @@ namespace VolleyHub.Application.GameParticipants.Commands.RemoveParticipant
         private readonly IGameParticipantRepository _gameParticipantRepository;
         private readonly IPlayerProfileRepository _playerProfileRepository;
         private readonly ICurrentUserService _currentUserService;
+        private readonly IDateTimeProvider _dateTimeProvider;
         private readonly IUnitOfWork _unitOfWork;
 
         public RemoveParticipantCommandHandler(
@@ -19,12 +20,14 @@ namespace VolleyHub.Application.GameParticipants.Commands.RemoveParticipant
             IGameParticipantRepository gameParticipantRepository,
             IPlayerProfileRepository playerProfileRepository,
             ICurrentUserService currentUserService,
+            IDateTimeProvider dateTimeProvider,
             IUnitOfWork unitOfWork)
         {
             _gameRepository = gameRepository;
             _gameParticipantRepository = gameParticipantRepository;
             _playerProfileRepository = playerProfileRepository;
             _currentUserService = currentUserService;
+            _dateTimeProvider = dateTimeProvider;
             _unitOfWork = unitOfWork;
         }
 
@@ -71,11 +74,11 @@ namespace VolleyHub.Application.GameParticipants.Commands.RemoveParticipant
                 throw new ForbiddenAccessException();
             }
 
-            var wasApproved = participant.JoinStatus is GameParticipantJoinStatus.Approved;
+            participant.Remove(
+                _dateTimeProvider.UtcNow,
+                game.StartsAt);
 
-            participant.Cancel();
-
-            if (wasApproved && game.Status is GameStatus.Full)
+            if (game.Status is GameStatus.Full)
             {
                 game.Reopen();
                 _gameRepository.Update(game);
