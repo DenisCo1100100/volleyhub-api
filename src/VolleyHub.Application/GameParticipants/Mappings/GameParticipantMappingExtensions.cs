@@ -6,7 +6,9 @@ namespace VolleyHub.Application.GameParticipants.Mappings
 {
     public static class GameParticipantMappingExtensions
     {
-        public static GameParticipantSummaryDto ToSummaryDto(this GameParticipant participant, PlayerProfile playerProfile)
+        public static GameParticipantSummaryDto ToSummaryDto(
+            this GameParticipant participant,
+            PlayerProfile playerProfile)
         {
             return new GameParticipantSummaryDto(
                 participant.Id,
@@ -17,7 +19,10 @@ namespace VolleyHub.Application.GameParticipants.Mappings
                 participant.AttendanceStatus,
                 participant.OfflinePaymentStatus,
                 participant.JoinedAt,
-                participant.ApprovedAt);
+                participant.ApprovedAt,
+                participant.CancelledAt,
+                participant.RemovedAt,
+                participant.CancellationType);
         }
     }
 }

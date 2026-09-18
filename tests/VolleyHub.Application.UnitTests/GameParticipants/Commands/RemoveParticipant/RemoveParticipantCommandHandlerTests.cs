@@ -11,61 +11,41 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.RemovePartic
 {
     public sealed class RemoveParticipantCommandHandlerTests
     {
+        private static readonly DateTimeOffset Now =
+            new(2026, 9, 18, 12, 0, 0, TimeSpan.Zero);
+
         [Fact]
-        public async Task Handle_ShouldCancelParticipantAndSaveChanges_WhenCurrentUserIsOrganizer()
+        public async Task Handle_ShouldRemoveParticipantAndSaveChanges_WhenCurrentUserIsOrganizer()
         {
             var currentUserId = Guid.NewGuid();
             var organizerProfile = CreatePlayerProfile(currentUserId);
-            var game = CreateGame(organizerProfile.Id);
-            var participant = CreateApprovedParticipant(game.Id);
+            var game = CreateGame(organizerProfile.Id, Now.AddDays(2));
+            var participant = CreateApprovedParticipant(
+                game.Id,
+                Now.AddDays(-1));
 
-            var gameRepositoryMock = new Mock<IGameRepository>();
-            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
-            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
-            var currentUserServiceMock = new Mock<ICurrentUserService>();
-            var unitOfWorkMock = new Mock<IUnitOfWork>();
-
-            SetupCurrentOrganizer(
-                currentUserServiceMock,
-                playerProfileRepositoryMock,
+            var context = CreateContext(
                 currentUserId,
-                organizerProfile);
+                organizerProfile,
+                game,
+                participant);
 
-            gameParticipantRepositoryMock
-                .Setup(repository => repository.GetByIdAsync(
-                    participant.Id,
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(participant);
+            await context.Handler.Handle(
+                new RemoveParticipantCommand(participant.Id),
+                CancellationToken.None);
 
-            gameRepositoryMock
-                .Setup(repository => repository.GetByIdAsync(
-                    game.Id,
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(game);
+            participant.JoinStatus.Should().Be(GameParticipantJoinStatus.Removed);
+            participant.RemovedAt.Should().Be(Now);
+            participant.CancelledAt.Should().BeNull();
+            participant.CancellationType.Should().BeNull();
 
-            unitOfWorkMock
-                .Setup(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(1);
-
-            var handler = new RemoveParticipantCommandHandler(
-                gameRepositoryMock.Object,
-                gameParticipantRepositoryMock.Object,
-                playerProfileRepositoryMock.Object,
-                currentUserServiceMock.Object,
-                unitOfWorkMock.Object);
-
-            var command = new RemoveParticipantCommand(participant.Id);
-
-            await handler.Handle(command, CancellationToken.None);
-
-            participant.JoinStatus.Should().Be(GameParticipantJoinStatus.Cancelled);
-
-            gameParticipantRepositoryMock.Verify(
+            context.GameParticipantRepositoryMock.Verify(
                 repository => repository.Update(participant),
                 Times.Once);
 
-            unitOfWorkMock.Verify(
-                unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            context.UnitOfWorkMock.Verify(
+                unitOfWork => unitOfWork.SaveChangesAsync(
+                    It.IsAny<CancellationToken>()),
                 Times.Once);
         }
 
@@ -74,73 +54,76 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.RemovePartic
         {
             var currentUserId = Guid.NewGuid();
             var organizerProfile = CreatePlayerProfile(currentUserId);
-            var game = CreateGame(organizerProfile.Id);
+            var game = CreateGame(organizerProfile.Id, Now.AddDays(2));
             game.MarkAsFull();
 
-            var participant = CreateApprovedParticipant(game.Id);
+            var participant = CreateApprovedParticipant(
+                game.Id,
+                Now.AddDays(-1));
 
-            var gameRepositoryMock = new Mock<IGameRepository>();
-            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
-            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
-            var currentUserServiceMock = new Mock<ICurrentUserService>();
-            var unitOfWorkMock = new Mock<IUnitOfWork>();
-
-            SetupCurrentOrganizer(
-                currentUserServiceMock,
-                playerProfileRepositoryMock,
+            var context = CreateContext(
                 currentUserId,
-                organizerProfile);
+                organizerProfile,
+                game,
+                participant);
 
-            gameParticipantRepositoryMock
-                .Setup(repository => repository.GetByIdAsync(
-                    participant.Id,
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(participant);
+            await context.Handler.Handle(
+                new RemoveParticipantCommand(participant.Id),
+                CancellationToken.None);
 
-            gameRepositoryMock
-                .Setup(repository => repository.GetByIdAsync(
-                    game.Id,
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(game);
-
-            unitOfWorkMock
-                .Setup(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(1);
-
-            var handler = new RemoveParticipantCommandHandler(
-                gameRepositoryMock.Object,
-                gameParticipantRepositoryMock.Object,
-                playerProfileRepositoryMock.Object,
-                currentUserServiceMock.Object,
-                unitOfWorkMock.Object);
-
-            var command = new RemoveParticipantCommand(participant.Id);
-
-            await handler.Handle(command, CancellationToken.None);
-
-            participant.JoinStatus.Should().Be(GameParticipantJoinStatus.Cancelled);
+            participant.JoinStatus.Should().Be(GameParticipantJoinStatus.Removed);
             game.Status.Should().Be(GameStatus.Open);
 
-            gameRepositoryMock.Verify(
+            context.GameRepositoryMock.Verify(
                 repository => repository.Update(game),
                 Times.Once);
+        }
 
-            gameParticipantRepositoryMock.Verify(
-                repository => repository.Update(participant),
-                Times.Once);
+        [Fact]
+        public async Task Handle_ShouldThrowBusinessRuleException_WhenGameHasStarted()
+        {
+            var currentUserId = Guid.NewGuid();
+            var organizerProfile = CreatePlayerProfile(currentUserId);
+            var game = CreateGame(
+                organizerProfile.Id,
+                Now.AddMinutes(-1));
 
-            unitOfWorkMock.Verify(
-                unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()),
-                Times.Once);
+            var participant = CreateApprovedParticipant(
+                game.Id,
+                Now.AddDays(-1));
+
+            var context = CreateContext(
+                currentUserId,
+                organizerProfile,
+                game,
+                participant);
+
+            Func<Task> act = async () => await context.Handler.Handle(
+                new RemoveParticipantCommand(participant.Id),
+                CancellationToken.None);
+
+            await act.Should().ThrowAsync<BusinessRuleException>();
+
+            context.GameParticipantRepositoryMock.Verify(
+                repository => repository.Update(It.IsAny<GameParticipant>()),
+                Times.Never);
+
+            context.UnitOfWorkMock.Verify(
+                unitOfWork => unitOfWork.SaveChangesAsync(
+                    It.IsAny<CancellationToken>()),
+                Times.Never);
         }
 
         [Fact]
         public async Task Handle_ShouldThrowUnauthorizedException_WhenCurrentUserDoesNotExist()
         {
             var gameRepositoryMock = new Mock<IGameRepository>();
-            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
-            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var gameParticipantRepositoryMock =
+                new Mock<IGameParticipantRepository>();
+            var playerProfileRepositoryMock =
+                new Mock<IPlayerProfileRepository>();
             var currentUserServiceMock = new Mock<ICurrentUserService>();
+            var dateTimeProviderMock = new Mock<IDateTimeProvider>();
             var unitOfWorkMock = new Mock<IUnitOfWork>();
 
             currentUserServiceMock
@@ -152,11 +135,12 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.RemovePartic
                 gameParticipantRepositoryMock.Object,
                 playerProfileRepositoryMock.Object,
                 currentUserServiceMock.Object,
+                dateTimeProviderMock.Object,
                 unitOfWorkMock.Object);
 
-            var command = new RemoveParticipantCommand(Guid.NewGuid());
-
-            Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
+            Func<Task> act = async () => await handler.Handle(
+                new RemoveParticipantCommand(Guid.NewGuid()),
+                CancellationToken.None);
 
             await act.Should().ThrowAsync<UnauthorizedException>();
 
@@ -164,20 +148,6 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.RemovePartic
                 repository => repository.GetByUserIdAsync(
                     It.IsAny<Guid>(),
                     It.IsAny<CancellationToken>()),
-                Times.Never);
-
-            gameParticipantRepositoryMock.Verify(
-                repository => repository.GetByIdAsync(
-                    It.IsAny<Guid>(),
-                    It.IsAny<CancellationToken>()),
-                Times.Never);
-
-            gameParticipantRepositoryMock.Verify(
-                repository => repository.Update(It.IsAny<GameParticipant>()),
-                Times.Never);
-
-            unitOfWorkMock.Verify(
-                unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()),
                 Times.Never);
         }
 
@@ -187,43 +157,37 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.RemovePartic
             var currentUserId = Guid.NewGuid();
 
             var gameRepositoryMock = new Mock<IGameRepository>();
-            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
-            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var gameParticipantRepositoryMock =
+                new Mock<IGameParticipantRepository>();
+            var playerProfileRepositoryMock =
+                new Mock<IPlayerProfileRepository>();
             var currentUserServiceMock = new Mock<ICurrentUserService>();
+            var dateTimeProviderMock = new Mock<IDateTimeProvider>();
             var unitOfWorkMock = new Mock<IUnitOfWork>();
 
-            SetupCurrentOrganizer(
-                currentUserServiceMock,
-                playerProfileRepositoryMock,
-                currentUserId,
-                organizerProfile: null);
+            currentUserServiceMock
+                .Setup(service => service.UserId)
+                .Returns(currentUserId);
+
+            playerProfileRepositoryMock
+                .Setup(repository => repository.GetByUserIdAsync(
+                    currentUserId,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync((PlayerProfile?)null);
 
             var handler = new RemoveParticipantCommandHandler(
                 gameRepositoryMock.Object,
                 gameParticipantRepositoryMock.Object,
                 playerProfileRepositoryMock.Object,
                 currentUserServiceMock.Object,
+                dateTimeProviderMock.Object,
                 unitOfWorkMock.Object);
 
-            var command = new RemoveParticipantCommand(Guid.NewGuid());
-
-            Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
+            Func<Task> act = async () => await handler.Handle(
+                new RemoveParticipantCommand(Guid.NewGuid()),
+                CancellationToken.None);
 
             await act.Should().ThrowAsync<NotFoundException>();
-
-            gameParticipantRepositoryMock.Verify(
-                repository => repository.GetByIdAsync(
-                    It.IsAny<Guid>(),
-                    It.IsAny<CancellationToken>()),
-                Times.Never);
-
-            gameParticipantRepositoryMock.Verify(
-                repository => repository.Update(It.IsAny<GameParticipant>()),
-                Times.Never);
-
-            unitOfWorkMock.Verify(
-                unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()),
-                Times.Never);
         }
 
         [Fact]
@@ -234,43 +198,37 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.RemovePartic
             organizerProfile.Delete();
 
             var gameRepositoryMock = new Mock<IGameRepository>();
-            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
-            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var gameParticipantRepositoryMock =
+                new Mock<IGameParticipantRepository>();
+            var playerProfileRepositoryMock =
+                new Mock<IPlayerProfileRepository>();
             var currentUserServiceMock = new Mock<ICurrentUserService>();
+            var dateTimeProviderMock = new Mock<IDateTimeProvider>();
             var unitOfWorkMock = new Mock<IUnitOfWork>();
 
-            SetupCurrentOrganizer(
-                currentUserServiceMock,
-                playerProfileRepositoryMock,
-                currentUserId,
-                organizerProfile);
+            currentUserServiceMock
+                .Setup(service => service.UserId)
+                .Returns(currentUserId);
+
+            playerProfileRepositoryMock
+                .Setup(repository => repository.GetByUserIdAsync(
+                    currentUserId,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(organizerProfile);
 
             var handler = new RemoveParticipantCommandHandler(
                 gameRepositoryMock.Object,
                 gameParticipantRepositoryMock.Object,
                 playerProfileRepositoryMock.Object,
                 currentUserServiceMock.Object,
+                dateTimeProviderMock.Object,
                 unitOfWorkMock.Object);
 
-            var command = new RemoveParticipantCommand(Guid.NewGuid());
-
-            Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
+            Func<Task> act = async () => await handler.Handle(
+                new RemoveParticipantCommand(Guid.NewGuid()),
+                CancellationToken.None);
 
             await act.Should().ThrowAsync<NotFoundException>();
-
-            gameParticipantRepositoryMock.Verify(
-                repository => repository.GetByIdAsync(
-                    It.IsAny<Guid>(),
-                    It.IsAny<CancellationToken>()),
-                Times.Never);
-
-            gameParticipantRepositoryMock.Verify(
-                repository => repository.Update(It.IsAny<GameParticipant>()),
-                Times.Never);
-
-            unitOfWorkMock.Verify(
-                unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()),
-                Times.Never);
         }
 
         [Fact]
@@ -281,16 +239,23 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.RemovePartic
             var participantId = Guid.NewGuid();
 
             var gameRepositoryMock = new Mock<IGameRepository>();
-            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
-            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var gameParticipantRepositoryMock =
+                new Mock<IGameParticipantRepository>();
+            var playerProfileRepositoryMock =
+                new Mock<IPlayerProfileRepository>();
             var currentUserServiceMock = new Mock<ICurrentUserService>();
+            var dateTimeProviderMock = new Mock<IDateTimeProvider>();
             var unitOfWorkMock = new Mock<IUnitOfWork>();
 
-            SetupCurrentOrganizer(
-                currentUserServiceMock,
-                playerProfileRepositoryMock,
-                currentUserId,
-                organizerProfile);
+            currentUserServiceMock
+                .Setup(service => service.UserId)
+                .Returns(currentUserId);
+
+            playerProfileRepositoryMock
+                .Setup(repository => repository.GetByUserIdAsync(
+                    currentUserId,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(organizerProfile);
 
             gameParticipantRepositoryMock
                 .Setup(repository => repository.GetByIdAsync(
@@ -303,21 +268,14 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.RemovePartic
                 gameParticipantRepositoryMock.Object,
                 playerProfileRepositoryMock.Object,
                 currentUserServiceMock.Object,
+                dateTimeProviderMock.Object,
                 unitOfWorkMock.Object);
 
-            var command = new RemoveParticipantCommand(participantId);
-
-            Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
+            Func<Task> act = async () => await handler.Handle(
+                new RemoveParticipantCommand(participantId),
+                CancellationToken.None);
 
             await act.Should().ThrowAsync<NotFoundException>();
-
-            gameParticipantRepositoryMock.Verify(
-                repository => repository.Update(It.IsAny<GameParticipant>()),
-                Times.Never);
-
-            unitOfWorkMock.Verify(
-                unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()),
-                Times.Never);
         }
 
         [Fact]
@@ -325,19 +283,29 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.RemovePartic
         {
             var currentUserId = Guid.NewGuid();
             var organizerProfile = CreatePlayerProfile(currentUserId);
-            var participant = CreateApprovedParticipant(Guid.NewGuid());
+
+            var participant = CreateApprovedParticipant(
+                Guid.NewGuid(),
+                Now.AddDays(-1));
 
             var gameRepositoryMock = new Mock<IGameRepository>();
-            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
-            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
+            var gameParticipantRepositoryMock =
+                new Mock<IGameParticipantRepository>();
+            var playerProfileRepositoryMock =
+                new Mock<IPlayerProfileRepository>();
             var currentUserServiceMock = new Mock<ICurrentUserService>();
+            var dateTimeProviderMock = new Mock<IDateTimeProvider>();
             var unitOfWorkMock = new Mock<IUnitOfWork>();
 
-            SetupCurrentOrganizer(
-                currentUserServiceMock,
-                playerProfileRepositoryMock,
-                currentUserId,
-                organizerProfile);
+            currentUserServiceMock
+                .Setup(service => service.UserId)
+                .Returns(currentUserId);
+
+            playerProfileRepositoryMock
+                .Setup(repository => repository.GetByUserIdAsync(
+                    currentUserId,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(organizerProfile);
 
             gameParticipantRepositoryMock
                 .Setup(repository => repository.GetByIdAsync(
@@ -356,21 +324,14 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.RemovePartic
                 gameParticipantRepositoryMock.Object,
                 playerProfileRepositoryMock.Object,
                 currentUserServiceMock.Object,
+                dateTimeProviderMock.Object,
                 unitOfWorkMock.Object);
 
-            var command = new RemoveParticipantCommand(participant.Id);
-
-            Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
+            Func<Task> act = async () => await handler.Handle(
+                new RemoveParticipantCommand(participant.Id),
+                CancellationToken.None);
 
             await act.Should().ThrowAsync<NotFoundException>();
-
-            gameParticipantRepositoryMock.Verify(
-                repository => repository.Update(It.IsAny<GameParticipant>()),
-                Times.Never);
-
-            unitOfWorkMock.Verify(
-                unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()),
-                Times.Never);
         }
 
         [Fact]
@@ -379,52 +340,28 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.RemovePartic
             var currentUserId = Guid.NewGuid();
             var currentUserProfile = CreatePlayerProfile(currentUserId);
 
-            var game = CreateGame(organizerId: Guid.NewGuid());
-            var participant = CreateApprovedParticipant(game.Id);
+            var game = CreateGame(
+                organizerId: Guid.NewGuid(),
+                startsAt: Now.AddDays(2));
 
-            var gameRepositoryMock = new Mock<IGameRepository>();
-            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
-            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
-            var currentUserServiceMock = new Mock<ICurrentUserService>();
-            var unitOfWorkMock = new Mock<IUnitOfWork>();
+            var participant = CreateApprovedParticipant(
+                game.Id,
+                Now.AddDays(-1));
 
-            SetupCurrentOrganizer(
-                currentUserServiceMock,
-                playerProfileRepositoryMock,
+            var context = CreateContext(
                 currentUserId,
-                currentUserProfile);
+                currentUserProfile,
+                game,
+                participant);
 
-            gameParticipantRepositoryMock
-                .Setup(repository => repository.GetByIdAsync(
-                    participant.Id,
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(participant);
-
-            gameRepositoryMock
-                .Setup(repository => repository.GetByIdAsync(
-                    game.Id,
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(game);
-
-            var handler = new RemoveParticipantCommandHandler(
-                gameRepositoryMock.Object,
-                gameParticipantRepositoryMock.Object,
-                playerProfileRepositoryMock.Object,
-                currentUserServiceMock.Object,
-                unitOfWorkMock.Object);
-
-            var command = new RemoveParticipantCommand(participant.Id);
-
-            Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
+            Func<Task> act = async () => await context.Handler.Handle(
+                new RemoveParticipantCommand(participant.Id),
+                CancellationToken.None);
 
             await act.Should().ThrowAsync<ForbiddenAccessException>();
 
-            gameParticipantRepositoryMock.Verify(
+            context.GameParticipantRepositoryMock.Verify(
                 repository => repository.Update(It.IsAny<GameParticipant>()),
-                Times.Never);
-
-            unitOfWorkMock.Verify(
-                unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()),
                 Times.Never);
         }
 
@@ -433,61 +370,47 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.RemovePartic
         {
             var currentUserId = Guid.NewGuid();
             var organizerProfile = CreatePlayerProfile(currentUserId);
-            var game = CreateGame(organizerProfile.Id);
-            var participant = CreateRejectedParticipant(game.Id);
 
-            var gameRepositoryMock = new Mock<IGameRepository>();
-            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
-            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
-            var currentUserServiceMock = new Mock<ICurrentUserService>();
-            var unitOfWorkMock = new Mock<IUnitOfWork>();
+            var game = CreateGame(
+                organizerProfile.Id,
+                Now.AddDays(2));
 
-            SetupCurrentOrganizer(
-                currentUserServiceMock,
-                playerProfileRepositoryMock,
+            var participant = CreateRejectedParticipant(
+                game.Id,
+                Now.AddDays(-1));
+
+            var context = CreateContext(
                 currentUserId,
-                organizerProfile);
+                organizerProfile,
+                game,
+                participant);
 
-            gameParticipantRepositoryMock
-                .Setup(repository => repository.GetByIdAsync(
-                    participant.Id,
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(participant);
-
-            gameRepositoryMock
-                .Setup(repository => repository.GetByIdAsync(
-                    game.Id,
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(game);
-
-            var handler = new RemoveParticipantCommandHandler(
-                gameRepositoryMock.Object,
-                gameParticipantRepositoryMock.Object,
-                playerProfileRepositoryMock.Object,
-                currentUserServiceMock.Object,
-                unitOfWorkMock.Object);
-
-            var command = new RemoveParticipantCommand(participant.Id);
-
-            Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
+            Func<Task> act = async () => await context.Handler.Handle(
+                new RemoveParticipantCommand(participant.Id),
+                CancellationToken.None);
 
             await act.Should().ThrowAsync<BusinessRuleException>();
 
-            gameParticipantRepositoryMock.Verify(
+            context.GameParticipantRepositoryMock.Verify(
                 repository => repository.Update(It.IsAny<GameParticipant>()),
-                Times.Never);
-
-            unitOfWorkMock.Verify(
-                unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()),
                 Times.Never);
         }
 
-        private static void SetupCurrentOrganizer(
-            Mock<ICurrentUserService> currentUserServiceMock,
-            Mock<IPlayerProfileRepository> playerProfileRepositoryMock,
+        private static TestContext CreateContext(
             Guid currentUserId,
-            PlayerProfile? organizerProfile)
+            PlayerProfile organizerProfile,
+            Game game,
+            GameParticipant participant)
         {
+            var gameRepositoryMock = new Mock<IGameRepository>();
+            var gameParticipantRepositoryMock =
+                new Mock<IGameParticipantRepository>();
+            var playerProfileRepositoryMock =
+                new Mock<IPlayerProfileRepository>();
+            var currentUserServiceMock = new Mock<ICurrentUserService>();
+            var dateTimeProviderMock = new Mock<IDateTimeProvider>();
+            var unitOfWorkMock = new Mock<IUnitOfWork>();
+
             currentUserServiceMock
                 .Setup(service => service.UserId)
                 .Returns(currentUserId);
@@ -497,12 +420,47 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.RemovePartic
                     currentUserId,
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(organizerProfile);
+
+            gameParticipantRepositoryMock
+                .Setup(repository => repository.GetByIdAsync(
+                    participant.Id,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(participant);
+
+            gameRepositoryMock
+                .Setup(repository => repository.GetByIdAsync(
+                    game.Id,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(game);
+
+            dateTimeProviderMock
+                .Setup(provider => provider.UtcNow)
+                .Returns(Now);
+
+            unitOfWorkMock
+                .Setup(unitOfWork => unitOfWork.SaveChangesAsync(
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(1);
+
+            var handler = new RemoveParticipantCommandHandler(
+                gameRepositoryMock.Object,
+                gameParticipantRepositoryMock.Object,
+                playerProfileRepositoryMock.Object,
+                currentUserServiceMock.Object,
+                dateTimeProviderMock.Object,
+                unitOfWorkMock.Object);
+
+            return new TestContext(
+                handler,
+                gameRepositoryMock,
+                gameParticipantRepositoryMock,
+                unitOfWorkMock);
         }
 
-        private static Game CreateGame(Guid organizerId)
+        private static Game CreateGame(
+            Guid organizerId,
+            DateTimeOffset startsAt)
         {
-            var startsAt = DateTimeOffset.UtcNow.AddDays(1);
-
             return Game.Create(
                 organizerId: organizerId,
                 courtId: Guid.NewGuid(),
@@ -515,21 +473,25 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.RemovePartic
                 description: "Evening volleyball game");
         }
 
-        private static GameParticipant CreateApprovedParticipant(Guid gameId)
+        private static GameParticipant CreateApprovedParticipant(
+            Guid gameId,
+            DateTimeOffset joinedAt)
         {
             return GameParticipant.JoinOpenGame(
                 gameId: gameId,
                 playerProfileId: Guid.NewGuid(),
-                joinedAt: DateTimeOffset.UtcNow,
+                joinedAt: joinedAt,
                 offlinePaymentStatus: GameParticipantOfflinePaymentStatus.Pending);
         }
 
-        private static GameParticipant CreateRejectedParticipant(Guid gameId)
+        private static GameParticipant CreateRejectedParticipant(
+            Guid gameId,
+            DateTimeOffset joinedAt)
         {
             var participant = GameParticipant.RequestToJoin(
                 gameId: gameId,
                 playerProfileId: Guid.NewGuid(),
-                joinedAt: DateTimeOffset.UtcNow,
+                joinedAt: joinedAt,
                 offlinePaymentStatus: GameParticipantOfflinePaymentStatus.Pending);
 
             participant.Reject();
@@ -546,5 +508,11 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.RemovePartic
                 city: "Amsterdam",
                 bio: "I like volleyball.");
         }
+
+        private sealed record TestContext(
+            RemoveParticipantCommandHandler Handler,
+            Mock<IGameRepository> GameRepositoryMock,
+            Mock<IGameParticipantRepository> GameParticipantRepositoryMock,
+            Mock<IUnitOfWork> UnitOfWorkMock);
     }
 }

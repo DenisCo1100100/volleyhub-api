@@ -12,5 +12,8 @@ namespace VolleyHub.Application.GameParticipants.Common
         GameParticipantAttendanceStatus AttendanceStatus,
         GameParticipantOfflinePaymentStatus OfflinePaymentStatus,
         DateTimeOffset JoinedAt,
-        DateTimeOffset? ApprovedAt);
+        DateTimeOffset? ApprovedAt,
+        DateTimeOffset? CancelledAt,
+        DateTimeOffset? RemovedAt,
+        GameParticipantCancellationType? CancellationType);
 }
