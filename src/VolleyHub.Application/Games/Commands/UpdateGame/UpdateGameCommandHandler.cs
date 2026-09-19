@@ -9,6 +9,7 @@ namespace VolleyHub.Application.Games.Commands.UpdateGame
     public sealed class UpdateGameCommandHandler : IRequestHandler<UpdateGameCommand>
     {
         private readonly IGameRepository _gameRepository;
+        private readonly IGameParticipantRepository _gameParticipantRepository;
         private readonly IPlayerProfileRepository _playerProfileRepository;
         private readonly ICurrentUserService _currentUserService;
         private readonly IUnitOfWork _unitOfWork;
@@ -17,9 +18,11 @@ namespace VolleyHub.Application.Games.Commands.UpdateGame
             IGameRepository gameRepository,
             IPlayerProfileRepository playerProfileRepository,
             ICurrentUserService currentUserService,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IGameParticipantRepository gameParticipantRepository)
         {
             _gameRepository = gameRepository;
+            _gameParticipantRepository = gameParticipantRepository;
             _playerProfileRepository = playerProfileRepository;
             _currentUserService = currentUserService;
             _unitOfWork = unitOfWork;
@@ -59,6 +62,10 @@ namespace VolleyHub.Application.Games.Commands.UpdateGame
                 throw new ForbiddenAccessException();
             }
 
+            var participants = await _gameParticipantRepository.GetByGameIdAsync(game.Id, cancellationToken);
+            var approvedCount = participants.Count(participant => participant.JoinStatus is GameParticipantJoinStatus.Approved);
+            game.EnsureCapacity(approvedCount, request.MaxPlayers);
+
             game.UpdateDetails(
                 organizerProfile.Id,
                 request.CourtId,
@@ -69,6 +76,11 @@ namespace VolleyHub.Application.Games.Commands.UpdateGame
                 request.RequiredLevel,
                 request.JoinPolicy,
                 request.Description);
+
+            if (game.Status is GameStatus.Open && approvedCount == game.MaxPlayers)
+            {
+                game.MarkAsFull();
+            }
 
             _gameRepository.Update(game);
             await _unitOfWork.SaveChangesAsync(cancellationToken);

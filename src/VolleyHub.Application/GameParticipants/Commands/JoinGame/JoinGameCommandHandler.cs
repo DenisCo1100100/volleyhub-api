@@ -88,6 +88,11 @@ namespace VolleyHub.Application.GameParticipants.Commands.JoinGame
             var approvedParticipantsCount = participants.Count(
                 participant => participant.JoinStatus is GameParticipantJoinStatus.Approved);
 
+            if (game.JoinPolicy is GameJoinPolicy.Open && participants.Any(participant => participant.JoinStatus is GameParticipantJoinStatus.Waitlisted))
+            {
+                throw new BusinessRuleException("Available places must be assigned from the waitlist first.");
+            }
+
             var offlinePaymentStatus = game.PricePerPlayer > 0
                 ? GameParticipantOfflinePaymentStatus.Pending
                 : GameParticipantOfflinePaymentStatus.NotRequired;

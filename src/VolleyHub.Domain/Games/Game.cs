@@ -82,6 +82,47 @@ namespace VolleyHub.Domain.Games
                 description);
         }
 
+        public void EnsureCanJoinWaitlist(int approvedParticipantCount, DateTimeOffset now)
+        {
+            if (Status is not GameStatus.Full || approvedParticipantCount < MaxPlayers)
+            {
+                throw new BusinessRuleException("Only full games accept waitlisted players.");
+            }
+
+            if (JoinPolicy is not GameJoinPolicy.Open and not GameJoinPolicy.ApprovalRequired)
+            {
+                throw new BusinessRuleException("Invite-only games do not accept waitlisted players.");
+            }
+
+            EnsureWaitlistBeforeStart(now);
+        }
+
+        public void EnsureCanPromoteFromWaitlist(int approvedParticipantCount, DateTimeOffset now)
+        {
+            if (Status is not GameStatus.Open || approvedParticipantCount >= MaxPlayers)
+            {
+                throw new BusinessRuleException("Waitlist promotion requires an open game with available capacity.");
+            }
+
+            EnsureWaitlistBeforeStart(now);
+        }
+
+        public void EnsureCapacity(int approvedParticipantCount, int maxPlayers)
+        {
+            if (maxPlayers < approvedParticipantCount)
+            {
+                throw new BusinessRuleException("Maximum players cannot be less than the approved participant count.");
+            }
+        }
+
+        private void EnsureWaitlistBeforeStart(DateTimeOffset now)
+        {
+            if (now >= StartsAt)
+            {
+                throw new BusinessRuleException("Players cannot join or be promoted from the waitlist after the game has started.");
+            }
+        }
+
         public void MarkAsFull()
         {
             if (Status is not GameStatus.Open)

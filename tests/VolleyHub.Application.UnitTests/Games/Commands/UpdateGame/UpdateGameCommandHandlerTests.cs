@@ -1,15 +1,61 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Moq;
 using VolleyHub.Application.Common.Exceptions;
 using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Application.Games.Commands.UpdateGame;
 using VolleyHub.Domain.Games;
 using VolleyHub.Domain.PlayerProfiles;
+using VolleyHub.Domain.Common;
 
 namespace VolleyHub.Application.UnitTests.Games.Commands.UpdateGame
 {
     public sealed class UpdateGameCommandHandlerTests
     {
+        [Theory]
+        [InlineData(2, true)]
+        [InlineData(3, false)]
+        public async Task Handle_ShouldProtectExistingPlaces_WhenCapacityChanges(int maxPlayers, bool shouldConflict)
+        {
+            var organizer = CreatePlayerProfile(Guid.NewGuid());
+            var game = CreateGame(organizer.Id);
+            var participants = Enumerable.Range(0, 3).Select(_ => GameParticipant.JoinOpenGame(
+                game.Id, Guid.NewGuid(), DateTimeOffset.UtcNow, GameParticipantOfflinePaymentStatus.NotRequired)).ToArray();
+            var games = new Mock<IGameRepository>();
+            var profiles = new Mock<IPlayerProfileRepository>();
+            var participantRepository = new Mock<IGameParticipantRepository>();
+            var user = new Mock<ICurrentUserService>();
+            var unitOfWork = new Mock<IUnitOfWork>();
+            games.Setup(repository => repository.GetByIdAsync(game.Id, It.IsAny<CancellationToken>())).ReturnsAsync(game);
+            profiles.Setup(repository => repository.GetByUserIdAsync(organizer.UserId, It.IsAny<CancellationToken>())).ReturnsAsync(organizer);
+            participantRepository.Setup(repository => repository.GetByGameIdAsync(game.Id, It.IsAny<CancellationToken>())).ReturnsAsync(participants);
+            user.SetupGet(service => service.UserId).Returns(organizer.UserId);
+            var handler = new UpdateGameCommandHandler(games.Object, profiles.Object, user.Object, unitOfWork.Object, participantRepository.Object);
+            var command = new UpdateGameCommand(game.Id, game.CourtId, game.StartsAt, game.EndsAt, maxPlayers,
+                game.PricePerPlayer, game.RequiredLevel, game.JoinPolicy, game.Description);
+
+            if (shouldConflict)
+            {
+                Func<Task> act = () => handler.Handle(command, CancellationToken.None);
+                await act.Should().ThrowAsync<BusinessRuleException>();
+                unitOfWork.Verify(unit => unit.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+            }
+            else
+            {
+                await handler.Handle(command, CancellationToken.None);
+                game.MaxPlayers.Should().Be(3);
+                game.Status.Should().Be(GameStatus.Full);
+                unitOfWork.Verify(unit => unit.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+            }
+        }
+
+        private static IGameParticipantRepository CreateParticipantRepository()
+        {
+            var repository = new Mock<IGameParticipantRepository>();
+            repository.Setup(value => value.GetByGameIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Array.Empty<GameParticipant>());
+            return repository.Object;
+        }
+
         [Fact]
         public async Task Handle_ShouldUpdateGameAndSaveChanges_WhenCurrentUserIsOrganizer()
         {
@@ -53,7 +99,8 @@ namespace VolleyHub.Application.UnitTests.Games.Commands.UpdateGame
                 gameRepositoryMock.Object,
                 playerProfileRepositoryMock.Object,
                 currentUserServiceMock.Object,
-                unitOfWorkMock.Object);
+                unitOfWorkMock.Object,
+                CreateParticipantRepository());
 
             var startsAt = DateTimeOffset.UtcNow.AddDays(2);
             var endsAt = startsAt.AddHours(2);
@@ -110,7 +157,8 @@ namespace VolleyHub.Application.UnitTests.Games.Commands.UpdateGame
                 gameRepositoryMock.Object,
                 playerProfileRepositoryMock.Object,
                 currentUserServiceMock.Object,
-                unitOfWorkMock.Object);
+                unitOfWorkMock.Object,
+                CreateParticipantRepository());
 
             var command = CreateValidCommand(Guid.NewGuid());
 
@@ -164,7 +212,8 @@ namespace VolleyHub.Application.UnitTests.Games.Commands.UpdateGame
                 gameRepositoryMock.Object,
                 playerProfileRepositoryMock.Object,
                 currentUserServiceMock.Object,
-                unitOfWorkMock.Object);
+                unitOfWorkMock.Object,
+                CreateParticipantRepository());
 
             var command = CreateValidCommand(Guid.NewGuid());
 
@@ -214,7 +263,8 @@ namespace VolleyHub.Application.UnitTests.Games.Commands.UpdateGame
                 gameRepositoryMock.Object,
                 playerProfileRepositoryMock.Object,
                 currentUserServiceMock.Object,
-                unitOfWorkMock.Object);
+                unitOfWorkMock.Object,
+                CreateParticipantRepository());
 
             var command = CreateValidCommand(Guid.NewGuid());
 
@@ -270,7 +320,8 @@ namespace VolleyHub.Application.UnitTests.Games.Commands.UpdateGame
                 gameRepositoryMock.Object,
                 playerProfileRepositoryMock.Object,
                 currentUserServiceMock.Object,
-                unitOfWorkMock.Object);
+                unitOfWorkMock.Object,
+                CreateParticipantRepository());
 
             var command = CreateValidCommand(gameId);
 
@@ -321,7 +372,8 @@ namespace VolleyHub.Application.UnitTests.Games.Commands.UpdateGame
                 gameRepositoryMock.Object,
                 playerProfileRepositoryMock.Object,
                 currentUserServiceMock.Object,
-                unitOfWorkMock.Object);
+                unitOfWorkMock.Object,
+                CreateParticipantRepository());
 
             var command = CreateValidCommand(game.Id);
 

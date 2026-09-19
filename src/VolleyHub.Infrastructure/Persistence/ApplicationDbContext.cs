@@ -26,11 +26,37 @@ namespace VolleyHub.Infrastructure.Persistence
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
         public DbSet<User> Users => Set<User>();
 
-        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
+            await UpdateGameVersionsAsync(cancellationToken);
             UpdateAuditableEntities();
 
-            return base.SaveChangesAsync(cancellationToken);
+            return await base.SaveChangesAsync(cancellationToken);
+        }
+
+        private async Task UpdateGameVersionsAsync(CancellationToken cancellationToken)
+        {
+            var changedGameIds = ChangeTracker.Entries<GameParticipant>()
+                .Where(entry => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+                .Select(entry => entry.Entity.GameId)
+                .Distinct()
+                .ToArray();
+
+            // Every participation change must compete on the same game row, even when its status stays unchanged.
+            foreach (var gameId in changedGameIds)
+            {
+                var game = await Games.FindAsync([gameId], cancellationToken);
+
+                if (game is not null)
+                {
+                    Entry(game).Property<Guid>("Version").CurrentValue = Guid.NewGuid();
+                }
+            }
+
+            foreach (var entry in ChangeTracker.Entries<Game>().Where(entry => entry.State is EntityState.Added or EntityState.Modified))
+            {
+                entry.Property<Guid>("Version").CurrentValue = Guid.NewGuid();
+            }
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

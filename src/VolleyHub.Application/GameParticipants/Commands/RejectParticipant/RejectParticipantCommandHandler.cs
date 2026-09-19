@@ -71,7 +71,14 @@ namespace VolleyHub.Application.GameParticipants.Commands.RejectParticipant
                 throw new ForbiddenAccessException();
             }
 
-            participant.Reject();
+            if (participant.JoinStatus is GameParticipantJoinStatus.Waitlisted)
+            {
+                participant.RejectFromWaitlist();
+            }
+            else
+            {
+                participant.Reject();
+            }
 
             _gameParticipantRepository.Update(participant);
             await _unitOfWork.SaveChangesAsync(cancellationToken);

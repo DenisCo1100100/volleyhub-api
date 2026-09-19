@@ -70,6 +70,57 @@ namespace VolleyHub.Domain.Games
             };
         }
 
+        public static GameParticipant JoinWaitlist(Game game, Guid playerProfileId, DateTimeOffset joinedAt, int approvedParticipantCount)
+        {
+            game.EnsureCanJoinWaitlist(approvedParticipantCount, joinedAt);
+
+            var participant = RequestToJoin(game.Id, playerProfileId, joinedAt, GameParticipantOfflinePaymentStatus.NotRequired);
+            participant.JoinStatus = GameParticipantJoinStatus.Waitlisted;
+            return participant;
+        }
+
+        public void PromoteFromWaitlist(Game game, int approvedParticipantCount, DateTimeOffset promotedAt)
+        {
+            if (JoinStatus is not GameParticipantJoinStatus.Waitlisted || GameId != game.Id)
+            {
+                throw new BusinessRuleException("Only waitlisted participants of this game can be promoted.");
+            }
+
+            ValidateApprovedAt(promotedAt);
+            game.EnsureCanPromoteFromWaitlist(approvedParticipantCount, promotedAt);
+
+            JoinStatus = GameParticipantJoinStatus.Approved;
+            ApprovedAt = promotedAt;
+            OfflinePaymentStatus = game.PricePerPlayer > 0
+                ? GameParticipantOfflinePaymentStatus.Pending
+                : GameParticipantOfflinePaymentStatus.NotRequired;
+
+            if (approvedParticipantCount + 1 == game.MaxPlayers)
+            {
+                game.MarkAsFull();
+            }
+        }
+
+        public void WithdrawFromWaitlist()
+        {
+            EnsureIsWaitlisted();
+            JoinStatus = GameParticipantJoinStatus.Cancelled;
+        }
+
+        public void RejectFromWaitlist()
+        {
+            EnsureIsWaitlisted();
+            JoinStatus = GameParticipantJoinStatus.Rejected;
+        }
+
+        private void EnsureIsWaitlisted()
+        {
+            if (JoinStatus is not GameParticipantJoinStatus.Waitlisted)
+            {
+                throw new BusinessRuleException("Participant is not on the waitlist.");
+            }
+        }
+
         public void Approve(DateTimeOffset approvedAt)
         {
             if (JoinStatus is not GameParticipantJoinStatus.PendingApproval)

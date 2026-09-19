@@ -15,5 +15,6 @@ namespace VolleyHub.Application.GameParticipants.Common
         DateTimeOffset? ApprovedAt,
         DateTimeOffset? CancelledAt,
         DateTimeOffset? RemovedAt,
-        GameParticipantCancellationType? CancellationType);
+        GameParticipantCancellationType? CancellationType,
+        int? WaitlistPosition = null);
 }

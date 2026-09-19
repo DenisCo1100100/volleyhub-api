@@ -21,5 +21,8 @@ namespace VolleyHub.Application.Games.Common
         GameParticipantJoinStatus? CurrentUserJoinStatus,
         IReadOnlyList<GameParticipantSummaryDto> Participants,
         DateTimeOffset CreatedAt,
-        DateTimeOffset? UpdatedAt);
+        DateTimeOffset? UpdatedAt)
+    {
+        public int WaitlistedParticipantCount => Participants.Count(participant => participant.JoinStatus is GameParticipantJoinStatus.Waitlisted);
+    }
 }

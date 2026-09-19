@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VolleyHub.Application.GameParticipants.Commands.ApproveParticipant;
 using VolleyHub.Application.GameParticipants.Commands.JoinGame;
+using VolleyHub.Application.GameParticipants.Commands.JoinGameWaitlist;
+using VolleyHub.Application.GameParticipants.Commands.PromoteGameWaitlist;
 using VolleyHub.Application.GameParticipants.Commands.LeaveGame;
 using VolleyHub.Application.GameParticipants.Commands.MarkParticipantAttendance;
 using VolleyHub.Application.GameParticipants.Commands.RejectParticipant;
@@ -46,6 +48,21 @@ namespace VolleyHub.Api.Controllers
                 nameof(GetGameParticipants),
                 new { gameId },
                 participantId);
+        }
+
+        [Authorize]
+        [HttpPost("games/{gameId:guid}/waitlist")]
+        public async Task<IActionResult> JoinGameWaitlist(Guid gameId, CancellationToken cancellationToken)
+        {
+            var participantId = await _sender.Send(new JoinGameWaitlistCommand(gameId), cancellationToken);
+            return CreatedAtAction(nameof(GetGameParticipants), new { gameId }, participantId);
+        }
+
+        [Authorize]
+        [HttpPost("games/{gameId:guid}/waitlist/promote")]
+        public async Task<ActionResult<Guid>> PromoteGameWaitlist(Guid gameId, CancellationToken cancellationToken)
+        {
+            return Ok(await _sender.Send(new PromoteGameWaitlistCommand(gameId), cancellationToken));
         }
 
         [Authorize]
