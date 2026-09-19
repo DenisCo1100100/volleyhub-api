@@ -39,6 +39,7 @@ namespace VolleyHub.Infrastructure.Persistence.Configurations
 
             builder.Property(participant => participant.JoinStatus)
                 .HasColumnName("join_status")
+                .IsConcurrencyToken()
                 .HasConversion<string>()
                 .HasMaxLength(50)
                 .IsRequired();

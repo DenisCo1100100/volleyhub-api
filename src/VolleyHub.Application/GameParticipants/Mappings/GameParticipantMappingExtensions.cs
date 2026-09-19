@@ -8,7 +8,8 @@ namespace VolleyHub.Application.GameParticipants.Mappings
     {
         public static GameParticipantSummaryDto ToSummaryDto(
             this GameParticipant participant,
-            PlayerProfile playerProfile)
+            PlayerProfile playerProfile,
+            int? waitlistPosition = null)
         {
             return new GameParticipantSummaryDto(
                 participant.Id,
@@ -22,7 +23,8 @@ namespace VolleyHub.Application.GameParticipants.Mappings
                 participant.ApprovedAt,
                 participant.CancelledAt,
                 participant.RemovedAt,
-                participant.CancellationType);
+                participant.CancellationType,
+                waitlistPosition);
         }
     }
 }

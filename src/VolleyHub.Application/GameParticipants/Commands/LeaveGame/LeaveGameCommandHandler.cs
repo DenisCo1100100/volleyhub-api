@@ -76,6 +76,10 @@ namespace VolleyHub.Application.GameParticipants.Commands.LeaveGame
 
             switch (participant.JoinStatus)
             {
+                case GameParticipantJoinStatus.Waitlisted:
+                    participant.WithdrawFromWaitlist();
+                    break;
+
                 case GameParticipantJoinStatus.PendingApproval:
                     participant.WithdrawRequest();
                     break;

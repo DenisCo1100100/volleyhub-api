@@ -7,6 +7,7 @@
         Approved = 2,
         Rejected = 3,
         Cancelled = 4,
-        Removed = 5
+        Removed = 5,
+        Waitlisted = 6
     }
 }

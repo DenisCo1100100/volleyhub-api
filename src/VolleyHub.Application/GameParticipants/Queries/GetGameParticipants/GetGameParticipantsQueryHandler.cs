@@ -4,6 +4,7 @@ using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Application.GameParticipants.Common;
 using VolleyHub.Application.GameParticipants.Mappings;
 using VolleyHub.Domain.PlayerProfiles;
+using VolleyHub.Domain.Games;
 
 namespace VolleyHub.Application.GameParticipants.Queries.GetGameParticipants
 {
@@ -31,7 +32,9 @@ namespace VolleyHub.Application.GameParticipants.Queries.GetGameParticipants
 
             var result = new List<GameParticipantSummaryDto>(participants.Count);
 
-            foreach (var participant in participants)
+            var waitlistPosition = 0;
+
+            foreach (var participant in participants.OrderBy(participant => participant.JoinedAt).ThenBy(participant => participant.Id))
             {
                 var playerProfile = await _playerProfileRepository.GetByIdAsync(
                     participant.PlayerProfileId,
@@ -44,7 +47,8 @@ namespace VolleyHub.Application.GameParticipants.Queries.GetGameParticipants
                         participant.PlayerProfileId);
                 }
 
-                result.Add(participant.ToSummaryDto(playerProfile));
+                result.Add(participant.ToSummaryDto(playerProfile,
+                    participant.JoinStatus is GameParticipantJoinStatus.Waitlisted ? ++waitlistPosition : null));
             }
 
             return result;

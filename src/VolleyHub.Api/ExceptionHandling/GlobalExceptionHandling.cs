@@ -79,6 +79,15 @@ namespace VolleyHub.Api.ExceptionHandling
                         Instance = httpContext.Request.Path
                     },
 
+                ConflictException conflictException =>
+                    new ProblemDetails
+                    {
+                        Status = StatusCodes.Status409Conflict,
+                        Title = "Conflict",
+                        Detail = conflictException.Message,
+                        Instance = httpContext.Request.Path
+                    },
+
                 BusinessRuleException businessRuleException =>
                     new ProblemDetails
                     {

@@ -87,6 +87,11 @@ namespace VolleyHub.Application.GameParticipants.Commands.ApproveParticipant
             var approvedParticipantsCount = participants.Count(
                 existingParticipant => existingParticipant.JoinStatus is GameParticipantJoinStatus.Approved);
 
+            if (participants.Any(existingParticipant => existingParticipant.JoinStatus is GameParticipantJoinStatus.Waitlisted))
+            {
+                throw new BusinessRuleException("Available places must be assigned from the waitlist first.");
+            }
+
             if (approvedParticipantsCount >= game.MaxPlayers)
             {
                 throw new BusinessRuleException("Game is full.");

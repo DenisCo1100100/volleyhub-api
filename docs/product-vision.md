@@ -280,7 +280,7 @@ The participation lifecycle should support:
 * leaving before the game;
 * being rejected;
 * being removed by the organizer;
-* eventually joining a waitlist when the game is full.
+* joining a waitlist when the game is full.
 
 Current participant states may include:
 
@@ -289,6 +289,8 @@ Current participant states may include:
 * `Rejected`;
 * `Left`;
 * `Removed`.
+
+Waitlisted players use `Waitlisted` and do not occupy confirmed capacity.
 
 The exact state model may evolve as cancellation and waitlist behavior becomes more detailed.
 
@@ -301,18 +303,18 @@ The system should make it clear:
 * whether the player has cancelled;
 * whether another player can take a released place.
 
-### Future Waitlist
+### Waitlist
 
-A waitlist is a likely extension of the core participation lifecycle.
+A full game accepts explicit waitlist entries before it starts. The initial implementation uses organizer-controlled FIFO promotion.
 
 When a game becomes full:
 
 1. additional players may join a waitlist;
 2. an approved participant may cancel;
 3. the released place becomes available;
-4. the next eligible player may be offered or assigned the place.
+4. the organizer promotes the next eligible player directly into the released place.
 
-The exact automatic or organizer-controlled behavior should be designed separately.
+Promotion also grants approval for `ApprovalRequired` games. Waitlisted players have priority over new direct joins and pending approvals when capacity becomes available. There are no temporary offers or claim deadlines. See [Game waitlist](game-waitlist.md) for ordering, transitions, API contracts, and concurrency rules.
 
 ## 9. Coaches in Games
 
@@ -990,8 +992,8 @@ The following questions should be answered gradually through product development
 
 1. When exactly does a player own a confirmed place?
 2. What happens when an approved player cancels?
-3. Should full games automatically create a waitlist?
-4. Should the next waitlisted player be promoted automatically or by the organizer?
+3. Should the explicit waitlist flow later offer automatic enrollment?
+4. Should organizer-controlled waitlist promotion later support automation?
 5. How late can a player cancel without affecting reliability?
 6. How should a late cancellation differ from a no-show?
 7. Can the organizer reopen a completed game if attendance was marked incorrectly?

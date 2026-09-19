@@ -14,6 +14,10 @@ namespace VolleyHub.Infrastructure.Persistence.Configurations
 
             builder.HasKey(game => game.Id);
 
+            builder.Property<Guid>("Version")
+                .HasColumnName("version")
+                .IsConcurrencyToken();
+
             builder.Property(game => game.Id)
                 .HasColumnName("id");
 

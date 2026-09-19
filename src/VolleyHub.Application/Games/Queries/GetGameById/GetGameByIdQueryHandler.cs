@@ -64,7 +64,9 @@ namespace VolleyHub.Application.Games.Queries.GetGameById
 
             var participantSummaries = new List<GameParticipantSummaryDto>(participants.Count);
 
-            foreach (var participant in participants)
+            var waitlistPosition = 0;
+
+            foreach (var participant in participants.OrderBy(participant => participant.JoinedAt).ThenBy(participant => participant.Id))
             {
                 var playerProfile = await _playerProfileRepository.GetByIdAsync(
                     participant.PlayerProfileId,
@@ -75,7 +77,8 @@ namespace VolleyHub.Application.Games.Queries.GetGameById
                     throw new NotFoundException(nameof(PlayerProfile), participant.PlayerProfileId);
                 }
 
-                participantSummaries.Add(participant.ToSummaryDto(playerProfile));
+                participantSummaries.Add(participant.ToSummaryDto(playerProfile,
+                    participant.JoinStatus is GameParticipantJoinStatus.Waitlisted ? ++waitlistPosition : null));
             }
 
             var currentPlayerProfileId = await GetCurrentPlayerProfileIdAsync(cancellationToken);
