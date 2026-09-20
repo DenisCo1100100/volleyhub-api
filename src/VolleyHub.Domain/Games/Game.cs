@@ -115,6 +115,15 @@ namespace VolleyHub.Domain.Games
             }
         }
 
+        public void EnsureCanChangePrice(decimal pricePerPlayer, IEnumerable<GameParticipant> participants)
+        {
+            if (pricePerPlayer != PricePerPlayer && participants.Any(participant =>
+                participant.GameId == Id && participant.OfflinePaymentStatus is GameParticipantOfflinePaymentStatus.Paid))
+            {
+                throw new BusinessRuleException("Price cannot be changed while participants have recorded payments.");
+            }
+        }
+
         private void EnsureWaitlistBeforeStart(DateTimeOffset now)
         {
             if (now >= StartsAt)

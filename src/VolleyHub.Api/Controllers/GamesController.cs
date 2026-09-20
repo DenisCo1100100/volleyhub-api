@@ -9,6 +9,7 @@ using VolleyHub.Application.Games.Commands.UpdateGame;
 using VolleyHub.Application.Games.Common;
 using VolleyHub.Application.Games.Queries.GetGameById;
 using VolleyHub.Application.Games.Queries.GetGames;
+using VolleyHub.Application.Games.Queries.GetGameOfflinePaymentSummary;
 using VolleyHub.Domain.Games;
 
 namespace VolleyHub.Api.Controllers
@@ -46,6 +47,13 @@ namespace VolleyHub.Api.Controllers
             var game = await _sender.Send(new GetGameByIdQuery(id), cancellationToken);
 
             return Ok(game);
+        }
+
+        [Authorize]
+        [HttpGet("{id:guid}/offline-payments")]
+        public async Task<ActionResult<GameOfflinePaymentSummaryDto>> GetOfflinePaymentSummary(Guid id, CancellationToken cancellationToken)
+        {
+            return Ok(await _sender.Send(new GetGameOfflinePaymentSummaryQuery(id), cancellationToken));
         }
 
         [Authorize]
