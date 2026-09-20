@@ -447,6 +447,8 @@ Important organizer improvements include:
 * organizer history;
 * organizer statistics.
 
+Authenticated players can read their participation history and organized games through dedicated paged endpoints, including status/time filters and per-game operational summaries. See [Game history](game-history.md) for contracts and ordering rules.
+
 Recurring games are especially important.
 
 Many real amateur volleyball games repeat every week with almost identical settings.

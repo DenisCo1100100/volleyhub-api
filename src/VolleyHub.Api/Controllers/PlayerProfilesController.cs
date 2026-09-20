@@ -10,6 +10,11 @@ using VolleyHub.Application.PlayerProfiles.Queries.GetCurrentPlayerProfile;
 using VolleyHub.Application.PlayerProfiles.Commands.UpdateCurrentPlayerProfile;
 using Microsoft.AspNetCore.Authorization;
 using VolleyHub.Domain.PlayerProfiles;
+using VolleyHub.Application.Common.Models;
+using VolleyHub.Application.Games.Common;
+using VolleyHub.Application.Games.Queries.GetPlayerGameHistory;
+using VolleyHub.Application.Games.Queries.GetOrganizedGameHistory;
+using VolleyHub.Domain.Games;
 
 namespace VolleyHub.Api.Controllers
 {
@@ -68,6 +73,22 @@ namespace VolleyHub.Api.Controllers
                 cancellationToken);
 
             return Ok(playerProfile);
+        }
+
+        [Authorize]
+        [HttpGet("me/games")]
+        public async Task<ActionResult<PagedResult<PlayerGameHistoryDto>>> GetPlayerGameHistory([FromQuery] GetPlayerGameHistoryRequest request, CancellationToken cancellationToken)
+        {
+            return Ok(await _sender.Send(new GetPlayerGameHistoryQuery(request.Page, request.PageSize, request.Period, request.Status,
+                request.StartsAtFrom, request.StartsAtTo, request.CourtId, request.JoinStatus), cancellationToken));
+        }
+
+        [Authorize]
+        [HttpGet("me/organized-games")]
+        public async Task<ActionResult<PagedResult<OrganizedGameHistoryDto>>> GetOrganizedGameHistory([FromQuery] GetGameHistoryRequest request, CancellationToken cancellationToken)
+        {
+            return Ok(await _sender.Send(new GetOrganizedGameHistoryQuery(request.Page, request.PageSize, request.Period, request.Status,
+                request.StartsAtFrom, request.StartsAtTo, request.CourtId), cancellationToken));
         }
 
         [Authorize]
@@ -138,6 +159,22 @@ namespace VolleyHub.Api.Controllers
 
             return NoContent();
         }
+    }
+
+    public class GetGameHistoryRequest
+    {
+        public int Page { get; init; } = 1;
+        public int PageSize { get; init; } = 20;
+        public GameHistoryPeriod Period { get; init; } = GameHistoryPeriod.All;
+        public GameStatus? Status { get; init; }
+        public DateTimeOffset? StartsAtFrom { get; init; }
+        public DateTimeOffset? StartsAtTo { get; init; }
+        public Guid? CourtId { get; init; }
+    }
+
+    public sealed class GetPlayerGameHistoryRequest : GetGameHistoryRequest
+    {
+        public GameParticipantJoinStatus? JoinStatus { get; init; }
     }
 
     public sealed record CreatePlayerProfileRequest(
