@@ -41,7 +41,11 @@ namespace VolleyHub.Application.Games.Mappings
                 approvedParticipantCount,
                 pendingParticipantCount,
                 Math.Max(0, game.MaxPlayers - approvedParticipantCount),
-                currentUserJoinStatus);
+                currentUserJoinStatus)
+            {
+                RecurrenceId = game.RecurrenceId,
+                OccurrenceNumber = game.OccurrenceNumber
+            };
         }
 
         public static GameDetailsDto ToDetailsDto(
@@ -81,7 +85,11 @@ namespace VolleyHub.Application.Games.Mappings
                 currentUserJoinStatus,
                 participants,
                 game.CreatedAt,
-                game.UpdatedAt);
+                game.UpdatedAt)
+            {
+                RecurrenceId = game.RecurrenceId,
+                OccurrenceNumber = game.OccurrenceNumber
+            };
         }
 
         private static GameCourtSummaryDto ToCourtSummary(Court court)

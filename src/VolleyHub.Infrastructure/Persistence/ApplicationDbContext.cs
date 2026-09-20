@@ -21,6 +21,7 @@ namespace VolleyHub.Infrastructure.Persistence
 
         public DbSet<Court> Courts => Set<Court>();
         public DbSet<Game> Games => Set<Game>();
+        public DbSet<GameRecurrence> GameRecurrences => Set<GameRecurrence>();
         public DbSet<GameParticipant> GameParticipants => Set<GameParticipant>();
         public DbSet<PlayerProfile> PlayerProfiles => Set<PlayerProfile>();
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
@@ -30,6 +31,11 @@ namespace VolleyHub.Infrastructure.Persistence
         {
             await UpdateGameVersionsAsync(cancellationToken);
             UpdateAuditableEntities();
+
+            foreach (var entry in ChangeTracker.Entries<GameRecurrence>().Where(entry => entry.State is EntityState.Added or EntityState.Modified))
+            {
+                entry.Property<Guid>("Version").CurrentValue = Guid.NewGuid();
+            }
 
             return await base.SaveChangesAsync(cancellationToken);
         }

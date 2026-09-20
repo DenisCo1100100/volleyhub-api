@@ -16,5 +16,9 @@ namespace VolleyHub.Application.Games.Common
         int ApprovedParticipantCount,
         int PendingParticipantCount,
         int AvailableSpots,
-        GameParticipantJoinStatus? CurrentUserJoinStatus);
+        GameParticipantJoinStatus? CurrentUserJoinStatus)
+    {
+        public Guid? RecurrenceId { get; init; }
+        public int? OccurrenceNumber { get; init; }
+    }
 }

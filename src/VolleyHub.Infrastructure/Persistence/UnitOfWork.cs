@@ -23,12 +23,17 @@ namespace VolleyHub.Infrastructure.Persistence
             }
             catch (DbUpdateConcurrencyException)
             {
-                throw new ConflictException("The game or participation changed. Refresh the game and try again.");
+                throw new ConflictException("The game, recurrence or participation changed. Refresh and try again.");
             }
             catch (DbUpdateException exception) when (exception.InnerException is PostgresException
                 { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "IX_game_participants_game_id_player_profile_id" })
             {
                 throw new ConflictException("Player has already joined this game.");
+            }
+            catch (DbUpdateException exception) when (exception.InnerException is PostgresException
+                { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "PK_game_recurrences" or "IX_games_recurrence_id_occurrence_number" })
+            {
+                throw new ConflictException("The recurrence or occurrence already exists. Read the existing recurrence before retrying.");
             }
         }
     }

@@ -43,7 +43,11 @@ namespace VolleyHub.Infrastructure.Persistence.Repositories
                         new GameCourtSummaryDto(court.Id, court.Name, court.Address, court.Latitude, court.Longitude, court.SurfaceType, court.IsIndoor),
                         new GameOrganizerSummaryDto(organizer.Id, organizer.DisplayName, organizer.SkillLevel),
                         game.StartsAt, game.EndsAt, game.MaxPlayers, game.PricePerPlayer, game.RequiredLevel, game.JoinPolicy, game.Status,
-                        approvedCount, pendingCount, game.MaxPlayers > approvedCount ? game.MaxPlayers - approvedCount : 0, participant.JoinStatus),
+                        approvedCount, pendingCount, game.MaxPlayers > approvedCount ? game.MaxPlayers - approvedCount : 0, participant.JoinStatus)
+                    {
+                        RecurrenceId = game.RecurrenceId,
+                        OccurrenceNumber = game.OccurrenceNumber
+                    },
                     new GameParticipationHistoryDto(
                         participant.Id, participant.JoinStatus, participant.AttendanceStatus, participant.OfflinePaymentStatus,
                         participant.JoinedAt, participant.ApprovedAt, participant.CancelledAt, participant.RemovedAt, participant.CancellationType));
@@ -83,7 +87,11 @@ namespace VolleyHub.Infrastructure.Persistence.Repositories
                         new GameCourtSummaryDto(court.Id, court.Name, court.Address, court.Latitude, court.Longitude, court.SurfaceType, court.IsIndoor),
                         new GameOrganizerSummaryDto(organizer.Id, organizer.DisplayName, organizer.SkillLevel),
                         game.StartsAt, game.EndsAt, game.MaxPlayers, game.PricePerPlayer, game.RequiredLevel, game.JoinPolicy, game.Status,
-                        approvedCount, pendingCount, game.MaxPlayers > approvedCount ? game.MaxPlayers - approvedCount : 0, currentUserJoinStatus),
+                        approvedCount, pendingCount, game.MaxPlayers > approvedCount ? game.MaxPlayers - approvedCount : 0, currentUserJoinStatus)
+                    {
+                        RecurrenceId = game.RecurrenceId,
+                        OccurrenceNumber = game.OccurrenceNumber
+                    },
                     waitlistedCount, presentCount, absentCount, unmarkedCount,
                     new GameOfflinePaymentSummaryDto(game.Id, game.PricePerPlayer,
                         paymentRequired ? approvedCount : 0, paidCount, paymentRequired ? approvedCount - paidCount : 0));
