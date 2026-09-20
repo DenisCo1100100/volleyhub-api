@@ -215,14 +215,53 @@ namespace VolleyHub.Domain.Games
             AttendanceStatus = attendanceStatus;
         }
 
-        public void MarkOfflinePaymentAsPaid()
+        public void UpdateOfflinePaymentStatus(Game game, GameParticipantOfflinePaymentStatus offlinePaymentStatus)
         {
-            if (OfflinePaymentStatus is GameParticipantOfflinePaymentStatus.NotRequired)
+            EnsureBelongsToGame(game);
+            ValidateOfflinePaymentStatus(offlinePaymentStatus);
+
+            if (JoinStatus is not GameParticipantJoinStatus.Approved)
             {
-                throw new BusinessRuleException("Payment is not required for this participant.");
+                throw new BusinessRuleException("Only approved participants can have their payment status updated.");
             }
 
-            OfflinePaymentStatus = GameParticipantOfflinePaymentStatus.Paid;
+            if (game.Status is not GameStatus.Open and not GameStatus.Full and not GameStatus.Completed)
+            {
+                throw new BusinessRuleException("Payment status can be updated only for open, full, or completed games.");
+            }
+
+            if (game.PricePerPlayer == 0 && offlinePaymentStatus is not GameParticipantOfflinePaymentStatus.NotRequired)
+            {
+                throw new BusinessRuleException("Free games do not require payment.");
+            }
+
+            if (game.PricePerPlayer > 0 && offlinePaymentStatus is GameParticipantOfflinePaymentStatus.NotRequired)
+            {
+                throw new BusinessRuleException("Paid games require a pending or paid payment status.");
+            }
+
+            OfflinePaymentStatus = offlinePaymentStatus;
+        }
+
+        public void SynchronizeOfflinePaymentRequirement(Game game)
+        {
+            EnsureBelongsToGame(game);
+
+            if ((game.PricePerPlayer == 0 || JoinStatus is GameParticipantJoinStatus.Approved or GameParticipantJoinStatus.PendingApproval)
+                && OfflinePaymentStatus is not GameParticipantOfflinePaymentStatus.Paid)
+            {
+                OfflinePaymentStatus = game.PricePerPlayer > 0
+                    ? GameParticipantOfflinePaymentStatus.Pending
+                    : GameParticipantOfflinePaymentStatus.NotRequired;
+            }
+        }
+
+        private void EnsureBelongsToGame(Game game)
+        {
+            if (GameId != game.Id)
+            {
+                throw new BusinessRuleException("Participant does not belong to this game.");
+            }
         }
 
         private static void ValidateGameId(Guid gameId)

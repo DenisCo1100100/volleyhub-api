@@ -255,12 +255,12 @@ namespace VolleyHub.Domain.UnitTests.Games
         }
 
         [Fact]
-        public void MarkOfflinePaymentAsPaid_ShouldSetPaymentStatusToPaid_WhenPaymentIsPending()
+        public void UpdateOfflinePaymentStatus_ShouldSetPaymentStatusToPaid_WhenPaymentIsPending()
         {
-            var participant = CreateApprovedParticipant(
-                offlinePaymentStatus: GameParticipantOfflinePaymentStatus.Pending);
+            var game = Game.Create(Guid.NewGuid(), Guid.NewGuid(), GameStartsAt, null, 12, 15, GameLevel.Any, GameJoinPolicy.Open, null);
+            var participant = GameParticipant.JoinOpenGame(game.Id, Guid.NewGuid(), GameStartsAt.AddDays(-3), GameParticipantOfflinePaymentStatus.Pending);
 
-            participant.MarkOfflinePaymentAsPaid();
+            participant.UpdateOfflinePaymentStatus(game, GameParticipantOfflinePaymentStatus.Paid);
 
             participant.OfflinePaymentStatus.Should().Be(
                 GameParticipantOfflinePaymentStatus.Paid);
@@ -385,12 +385,12 @@ namespace VolleyHub.Domain.UnitTests.Games
         }
 
         [Fact]
-        public void MarkOfflinePaymentAsPaid_ShouldThrowBusinessRuleException_WhenPaymentIsNotRequired()
+        public void UpdateOfflinePaymentStatus_ShouldThrowBusinessRuleException_WhenGameIsFree()
         {
-            var participant = CreateApprovedParticipant(
-                offlinePaymentStatus: GameParticipantOfflinePaymentStatus.NotRequired);
+            var game = Game.Create(Guid.NewGuid(), Guid.NewGuid(), GameStartsAt, null, 12, 0, GameLevel.Any, GameJoinPolicy.Open, null);
+            var participant = GameParticipant.JoinOpenGame(game.Id, Guid.NewGuid(), GameStartsAt.AddDays(-3), GameParticipantOfflinePaymentStatus.NotRequired);
 
-            Action act = participant.MarkOfflinePaymentAsPaid;
+            Action act = () => participant.UpdateOfflinePaymentStatus(game, GameParticipantOfflinePaymentStatus.Paid);
 
             act.Should().Throw<BusinessRuleException>();
         }

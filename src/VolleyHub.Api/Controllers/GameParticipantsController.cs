@@ -7,6 +7,7 @@ using VolleyHub.Application.GameParticipants.Commands.JoinGameWaitlist;
 using VolleyHub.Application.GameParticipants.Commands.PromoteGameWaitlist;
 using VolleyHub.Application.GameParticipants.Commands.LeaveGame;
 using VolleyHub.Application.GameParticipants.Commands.MarkParticipantAttendance;
+using VolleyHub.Application.GameParticipants.Commands.UpdateParticipantOfflinePayment;
 using VolleyHub.Application.GameParticipants.Commands.RejectParticipant;
 using VolleyHub.Application.GameParticipants.Commands.RemoveParticipant;
 using VolleyHub.Application.GameParticipants.Common;
@@ -124,6 +125,16 @@ namespace VolleyHub.Api.Controllers
 
             return NoContent();
         }
+
+        [Authorize]
+        [HttpPut("game-participants/{participantId:guid}/offline-payment")]
+        public async Task<IActionResult> UpdateOfflinePayment(Guid participantId, UpdateParticipantOfflinePaymentRequest request, CancellationToken cancellationToken)
+        {
+            await _sender.Send(new UpdateParticipantOfflinePaymentCommand(participantId, request.OfflinePaymentStatus), cancellationToken);
+            return NoContent();
+        }
+
+        public sealed record UpdateParticipantOfflinePaymentRequest(GameParticipantOfflinePaymentStatus OfflinePaymentStatus);
 
         public sealed record MarkParticipantAttendanceRequest(GameParticipantAttendanceStatus AttendanceStatus);
     }

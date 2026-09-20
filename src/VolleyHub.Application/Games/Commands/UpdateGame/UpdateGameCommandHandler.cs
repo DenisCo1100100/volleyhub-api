@@ -65,6 +65,8 @@ namespace VolleyHub.Application.Games.Commands.UpdateGame
             var participants = await _gameParticipantRepository.GetByGameIdAsync(game.Id, cancellationToken);
             var approvedCount = participants.Count(participant => participant.JoinStatus is GameParticipantJoinStatus.Approved);
             game.EnsureCapacity(approvedCount, request.MaxPlayers);
+            game.EnsureCanChangePrice(request.PricePerPlayer, participants);
+            var priceChanged = game.PricePerPlayer != request.PricePerPlayer;
 
             game.UpdateDetails(
                 organizerProfile.Id,
@@ -76,6 +78,24 @@ namespace VolleyHub.Application.Games.Commands.UpdateGame
                 request.RequiredLevel,
                 request.JoinPolicy,
                 request.Description);
+
+            if (priceChanged)
+            {
+                foreach (var participant in participants)
+                {
+                    if (game.PricePerPlayer == 0 || participant.JoinStatus is GameParticipantJoinStatus.Approved or GameParticipantJoinStatus.PendingApproval)
+                    {
+                        var trackedParticipant = await _gameParticipantRepository.GetByIdAsync(participant.Id, cancellationToken)
+                            ?? throw new NotFoundException(nameof(GameParticipant), participant.Id);
+                        var previousStatus = trackedParticipant.OfflinePaymentStatus;
+                        trackedParticipant.SynchronizeOfflinePaymentRequirement(game);
+                        if (trackedParticipant.OfflinePaymentStatus != previousStatus)
+                        {
+                            _gameParticipantRepository.Update(trackedParticipant);
+                        }
+                    }
+                }
+            }
 
             if (game.Status is GameStatus.Open && approvedCount == game.MaxPlayers)
             {

@@ -52,6 +52,7 @@ namespace VolleyHub.Infrastructure.Persistence.Configurations
 
             builder.Property(participant => participant.OfflinePaymentStatus)
                 .HasColumnName("offline_payment_status")
+                .IsConcurrencyToken()
                 .HasConversion<string>()
                 .HasMaxLength(50)
                 .IsRequired();
