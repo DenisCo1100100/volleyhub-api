@@ -10,9 +10,15 @@ namespace VolleyHub.Infrastructure.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<Game> builder)
         {
-            builder.ToTable("games");
+            builder.ToTable("games", table => table.HasCheckConstraint("CK_games_recurrence_occurrence",
+                "(recurrence_id IS NULL AND occurrence_number IS NULL) OR (recurrence_id IS NOT NULL AND occurrence_number IS NOT NULL AND occurrence_number BETWEEN 1 AND 52)"));
 
             builder.HasKey(game => game.Id);
+
+            builder.Property(game => game.RecurrenceId).HasColumnName("recurrence_id");
+            builder.Property(game => game.OccurrenceNumber).HasColumnName("occurrence_number");
+            builder.HasIndex(game => new { game.RecurrenceId, game.OccurrenceNumber }).IsUnique();
+            builder.HasOne<GameRecurrence>().WithMany().HasForeignKey(game => game.RecurrenceId).OnDelete(DeleteBehavior.Restrict);
 
             builder.Property<Guid>("Version")
                 .HasColumnName("version")

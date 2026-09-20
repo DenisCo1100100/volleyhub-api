@@ -88,7 +88,11 @@ namespace VolleyHub.Infrastructure.Persistence.Repositories
                     game.MaxPlayers > approvedParticipantCount
                         ? game.MaxPlayers - approvedParticipantCount
                         : 0,
-                    currentUserJoinStatus);
+                    currentUserJoinStatus)
+                {
+                    RecurrenceId = game.RecurrenceId,
+                    OccurrenceNumber = game.OccurrenceNumber
+                };
 
             return query
                 .Skip((parameters.Page - 1) * parameters.PageSize)

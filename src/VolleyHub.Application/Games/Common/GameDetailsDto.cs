@@ -23,6 +23,8 @@ namespace VolleyHub.Application.Games.Common
         DateTimeOffset CreatedAt,
         DateTimeOffset? UpdatedAt)
     {
+        public Guid? RecurrenceId { get; init; }
+        public int? OccurrenceNumber { get; init; }
         public int WaitlistedParticipantCount => Participants.Count(participant => participant.JoinStatus is GameParticipantJoinStatus.Waitlisted);
     }
 }

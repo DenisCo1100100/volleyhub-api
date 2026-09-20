@@ -18,6 +18,8 @@ namespace VolleyHub.Domain.Games
         public Guid Id { get; private set; }
         public Guid OrganizerId { get; private set; }
         public Guid CourtId { get; private set; }
+        public Guid? RecurrenceId { get; private set; }
+        public int? OccurrenceNumber { get; private set; }
         public DateTimeOffset StartsAt { get; private set; }
         public DateTimeOffset? EndsAt { get; private set; }
         public int MaxPlayers { get; private set; }
@@ -55,6 +57,12 @@ namespace VolleyHub.Domain.Games
                 description);
 
             return game;
+        }
+
+        internal void AssignRecurrence(Guid recurrenceId, int occurrenceNumber)
+        {
+            RecurrenceId = recurrenceId;
+            OccurrenceNumber = occurrenceNumber;
         }
 
         public void UpdateDetails(

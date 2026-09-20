@@ -116,7 +116,6 @@ VolleyHub should remove as much repetitive organizational work from them as poss
 Possible organizer features later:
 
 * organizer dashboard;
-* recurring games;
 * game templates;
 * organizer history;
 * statistics;
@@ -466,6 +465,8 @@ Approval required
 ```
 
 An organizer should not need to recreate the same game manually every week.
+
+Weekly recurring games now support finite schedules of 2–52 independent games generated immediately from an existing game's settings. Organizers can edit or cancel one occurrence, update future settings, or cancel the remaining series. The first version uses a fixed UTC weekly schedule and preserves each game's participation, offline payment, attendance, and history lifecycle. See [Recurring games](recurring-games.md) for schedule limits, scope rules, retries, concurrency, and API contracts.
 
 ## 13. Training and Coach Direction
 
@@ -1015,8 +1016,8 @@ The following questions should be answered gradually through product development
 
 ### Organizer operations
 
-18. How should recurring games work?
-19. Should recurring games create future games immediately or gradually?
+18. Should recurring games later support local time-zone schedules and DST adjustments?
+19. Should finite recurring schedules later support extension or incremental generation?
 20. How should game templates differ from recurring games?
 21. Which payment information does an organizer actually need?
 22. Should players see their own offline payment status?
