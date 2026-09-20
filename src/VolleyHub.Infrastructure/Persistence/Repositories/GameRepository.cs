@@ -6,7 +6,7 @@ using VolleyHub.Domain.Games;
 
 namespace VolleyHub.Infrastructure.Persistence.Repositories
 {
-    public sealed class GameRepository : IGameRepository
+    public sealed partial class GameRepository : IGameRepository
     {
         private readonly ApplicationDbContext _context;
 
