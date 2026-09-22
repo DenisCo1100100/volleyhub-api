@@ -34,6 +34,7 @@ namespace VolleyHub.Infrastructure
             services.AddScoped<ICourtRepository, CourtRepository>();
             services.AddScoped<IGameRepository, GameRepository>();
             services.AddScoped<IGameRecurrenceRepository, GameRecurrenceRepository>();
+            services.AddScoped<IGameTemplateRepository, GameTemplateRepository>();
             services.AddScoped<IGameParticipantRepository, GameParticipantRepository>();
             services.AddScoped<IPlayerProfileRepository, PlayerProfileRepository>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();

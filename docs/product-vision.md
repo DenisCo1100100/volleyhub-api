@@ -116,7 +116,6 @@ VolleyHub should remove as much repetitive organizational work from them as poss
 Possible organizer features later:
 
 * organizer dashboard;
-* game templates;
 * organizer history;
 * statistics;
 * average attendance;
@@ -467,6 +466,25 @@ Approval required
 An organizer should not need to recreate the same game manually every week.
 
 Weekly recurring games now support finite schedules of 2–52 independent games generated immediately from an existing game's settings. Organizers can edit or cancel one occurrence, update future settings, or cancel the remaining series. The first version uses a fixed UTC weekly schedule and preserves each game's participation, offline payment, attendance, and history lifecycle. See [Recurring games](recurring-games.md) for schedule limits, scope rules, retries, concurrency, and API contracts.
+
+### Game templates
+
+An active player profile can save private, named game templates for games without a fixed schedule. A template stores `name` (required, up to 100 characters), `courtId`, optional positive `duration`, `maxPlayers`, `pricePerPlayer`, `requiredLevel`, `joinPolicy`, and optional `description`. Game settings follow the existing game validation rules. Names need not be unique. Duration uses the same TimeSpan JSON string as recurring games, for example `"02:00:00"`; null means no end time.
+
+Using a template requires `startsAt`. It is normalized to UTC and follows ordinary game start validation. The end is calculated from the saved duration; dates outside the supported calendar range are rejected. Each use creates one independent, open `Game` with an empty participant list and no recurrence identity. Subsequent game edits use the ordinary game endpoints. Editing or deleting a template never changes existing games, participation, payments, attendance, or history. Templates do not store dates, participants, game status, or recurrence rules, and do not create a venue reservation.
+
+All template endpoints require authentication and an active player profile. Ownership comes from that profile and cannot be supplied or transferred in a request. Other organizers receive `403`; a missing template, active profile, or court returns `404`. Invalid input returns `400`, and conflicting template writes return `409`, using ProblemDetails. The court must be active when saving or using a template. If it is later deleted, the template remains readable and can be repaired by selecting another active court, or deleted.
+
+| Action | Endpoint | Success |
+| --- | --- | --- |
+| Create template | `POST /api/game-templates` | `201`, UUID body and `Location` |
+| List own templates, ordered by name then ID | `GET /api/game-templates` | `200`, array of template details |
+| Read own template | `GET /api/game-templates/{id}` | `200`, template details |
+| Replace template settings | `PUT /api/game-templates/{id}` | `204` |
+| Delete template | `DELETE /api/game-templates/{id}` | `204` |
+| Create game with `{ "startsAt": "2027-01-04T17:00:00Z" }` | `POST /api/game-templates/{id}/games` | `201`, game UUID and game `Location` |
+
+Create and update accept the saved fields listed above. Template details add `id`, `createdAt`, and nullable `updatedAt`. Deletion removes the template permanently; further access returns `404`. Games have no foreign key to templates. Apply the `AddGameTemplates` migration before deploying. Sharing, public template discovery, organization or venue ownership, and scheduling remain outside templates; recurring games stay a separate concept.
 
 ## 13. Training and Coach Direction
 
@@ -1018,7 +1036,7 @@ The following questions should be answered gradually through product development
 
 18. Should recurring games later support local time-zone schedules and DST adjustments?
 19. Should finite recurring schedules later support extension or incremental generation?
-20. How should game templates differ from recurring games?
+20. Should private game templates later support explicit sharing?
 21. Which payment information does an organizer actually need?
 22. Should players see their own offline payment status?
 23. What organizer statistics are genuinely useful?
