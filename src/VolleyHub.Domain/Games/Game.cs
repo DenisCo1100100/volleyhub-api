@@ -197,14 +197,9 @@ namespace VolleyHub.Domain.Games
             string? description)
         {
             ValidateOrganizerId(organizerId);
-            ValidateCourtId(courtId);
             ValidateStartsAt(startsAt);
             ValidateEndsAt(startsAt, endsAt);
-            ValidateMaxPlayers(maxPlayers);
-            ValidatePricePerPlayer(pricePerPlayer);
-            ValidateRequiredLevel(requiredLevel);
-            ValidateJoinPolicy(joinPolicy);
-            ValidateDescription(description);
+            ValidateSettings(courtId, maxPlayers, pricePerPlayer, requiredLevel, joinPolicy, description);
 
             OrganizerId = organizerId;
             CourtId = courtId;
@@ -215,6 +210,16 @@ namespace VolleyHub.Domain.Games
             RequiredLevel = requiredLevel;
             JoinPolicy = joinPolicy;
             Description = NormalizeOptionalText(description);
+        }
+
+        internal static void ValidateSettings(Guid courtId, int maxPlayers, decimal pricePerPlayer, GameLevel requiredLevel, GameJoinPolicy joinPolicy, string? description)
+        {
+            ValidateCourtId(courtId);
+            ValidateMaxPlayers(maxPlayers);
+            ValidatePricePerPlayer(pricePerPlayer);
+            ValidateRequiredLevel(requiredLevel);
+            ValidateJoinPolicy(joinPolicy);
+            ValidateDescription(description);
         }
 
         private void EnsureCanBeChanged()

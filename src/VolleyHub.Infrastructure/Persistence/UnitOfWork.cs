@@ -23,7 +23,7 @@ namespace VolleyHub.Infrastructure.Persistence
             }
             catch (DbUpdateConcurrencyException)
             {
-                throw new ConflictException("The game, recurrence or participation changed. Refresh and try again.");
+                throw new ConflictException("The game, template, recurrence or participation changed. Refresh and try again.");
             }
             catch (DbUpdateException exception) when (exception.InnerException is PostgresException
                 { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "IX_game_participants_game_id_player_profile_id" })
