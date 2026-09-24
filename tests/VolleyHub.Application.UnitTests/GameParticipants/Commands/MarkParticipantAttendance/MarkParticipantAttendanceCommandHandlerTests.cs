@@ -12,16 +12,21 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.MarkParticip
     public sealed class MarkParticipantAttendanceCommandHandlerTests
     {
         [Theory]
-        [InlineData(GameParticipantAttendanceStatus.Present)]
-        [InlineData(GameParticipantAttendanceStatus.Absent)]
+        [InlineData(GameParticipantAttendanceStatus.Present, GameParticipantAttendanceStatus.NotMarked)]
+        [InlineData(GameParticipantAttendanceStatus.Absent, GameParticipantAttendanceStatus.NotMarked)]
+        [InlineData(GameParticipantAttendanceStatus.Present, GameParticipantAttendanceStatus.Absent)]
+        [InlineData(GameParticipantAttendanceStatus.Absent, GameParticipantAttendanceStatus.Present)]
+        [InlineData(GameParticipantAttendanceStatus.Present, GameParticipantAttendanceStatus.Present)]
+        [InlineData(GameParticipantAttendanceStatus.Absent, GameParticipantAttendanceStatus.Absent)]
         public async Task Handle_ShouldMarkAttendanceAndSaveChanges_WhenCurrentUserIsOrganizerAndGameIsCompletedAndParticipantIsApproved(
-            GameParticipantAttendanceStatus attendanceStatus)
+            GameParticipantAttendanceStatus attendanceStatus, GameParticipantAttendanceStatus previousStatus)
         {
             var currentUserId = Guid.NewGuid();
             var organizerProfile = CreatePlayerProfile(currentUserId);
 
             var game = CreateCompletedGame(organizerProfile.Id);
             var participant = CreateApprovedParticipant(game.Id);
+            if (previousStatus != GameParticipantAttendanceStatus.NotMarked) participant.MarkAttendance(game, previousStatus);
 
             var gameRepositoryMock = new Mock<IGameRepository>();
             var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
@@ -438,14 +443,32 @@ namespace VolleyHub.Application.UnitTests.GameParticipants.Commands.MarkParticip
                 Times.Never);
         }
 
-        [Fact]
-        public async Task Handle_ShouldThrowBusinessRuleException_WhenParticipantIsNotApproved()
+        [Theory]
+        [InlineData(GameParticipantJoinStatus.PendingApproval)]
+        [InlineData(GameParticipantJoinStatus.Cancelled)]
+        [InlineData(GameParticipantJoinStatus.Removed)]
+        [InlineData(GameParticipantJoinStatus.Rejected)]
+        [InlineData(GameParticipantJoinStatus.Waitlisted)]
+        public async Task Handle_ShouldThrowBusinessRuleException_WhenParticipantIsNotApproved(GameParticipantJoinStatus status)
         {
             var currentUserId = Guid.NewGuid();
             var organizerProfile = CreatePlayerProfile(currentUserId);
 
-            var game = CreateCompletedGame(organizerProfile.Id);
+            var game = CreateOpenGame(organizerProfile.Id);
             var participant = CreatePendingParticipant(game.Id);
+            if (status is GameParticipantJoinStatus.Cancelled or GameParticipantJoinStatus.Removed)
+            {
+                participant.Approve(participant.JoinedAt);
+                if (status == GameParticipantJoinStatus.Cancelled) participant.CancelParticipation(DateTimeOffset.UtcNow, game.StartsAt);
+                else participant.Remove(DateTimeOffset.UtcNow, game.StartsAt);
+            }
+            if (status == GameParticipantJoinStatus.Rejected) participant.Reject();
+            if (status == GameParticipantJoinStatus.Waitlisted)
+            {
+                game.MarkAsFull();
+                participant = GameParticipant.JoinWaitlist(game, Guid.NewGuid(), DateTimeOffset.UtcNow, game.MaxPlayers);
+            }
+            game.Complete();
 
             var gameRepositoryMock = new Mock<IGameRepository>();
             var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();

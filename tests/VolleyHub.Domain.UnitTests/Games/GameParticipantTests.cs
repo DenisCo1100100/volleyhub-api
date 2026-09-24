@@ -9,6 +9,8 @@ namespace VolleyHub.Domain.UnitTests.Games
         private static readonly DateTimeOffset GameStartsAt =
             new(2026, 9, 20, 20, 0, 0, TimeSpan.Zero);
 
+        private readonly Game _game = CreateCompletedGame();
+
         [Fact]
         public void RequestToJoin_ShouldCreatePendingParticipant_WhenDataIsValid()
         {
@@ -219,7 +221,7 @@ namespace VolleyHub.Domain.UnitTests.Games
         {
             var participant = CreateApprovedParticipant();
 
-            participant.MarkAttendance(GameParticipantAttendanceStatus.Present);
+            participant.MarkAttendance(_game, GameParticipantAttendanceStatus.Present);
 
             participant.AttendanceStatus.Should().Be(GameParticipantAttendanceStatus.Present);
         }
@@ -234,6 +236,7 @@ namespace VolleyHub.Domain.UnitTests.Games
                 GameStartsAt);
 
             Action act = () => participant.MarkAttendance(
+                _game,
                 GameParticipantAttendanceStatus.Absent);
 
             act.Should().Throw<BusinessRuleException>();
@@ -249,6 +252,7 @@ namespace VolleyHub.Domain.UnitTests.Games
                 GameStartsAt);
 
             Action act = () => participant.MarkAttendance(
+                _game,
                 GameParticipantAttendanceStatus.Absent);
 
             act.Should().Throw<BusinessRuleException>();
@@ -365,6 +369,7 @@ namespace VolleyHub.Domain.UnitTests.Games
             var participant = CreatePendingParticipant();
 
             Action act = () => participant.MarkAttendance(
+                _game,
                 GameParticipantAttendanceStatus.Present);
 
             act.Should().Throw<BusinessRuleException>();
@@ -379,7 +384,7 @@ namespace VolleyHub.Domain.UnitTests.Games
         {
             var participant = CreateApprovedParticipant();
 
-            Action act = () => participant.MarkAttendance(attendanceStatus);
+            Action act = () => participant.MarkAttendance(_game, attendanceStatus);
 
             act.Should().Throw<ArgumentException>();
         }
@@ -395,21 +400,28 @@ namespace VolleyHub.Domain.UnitTests.Games
             act.Should().Throw<BusinessRuleException>();
         }
 
-        private static GameParticipant CreatePendingParticipant()
+        private static Game CreateCompletedGame()
+        {
+            var game = Game.Create(Guid.NewGuid(), Guid.NewGuid(), GameStartsAt, null, 12, 15, GameLevel.Any, GameJoinPolicy.Open, null);
+            game.Complete();
+            return game;
+        }
+
+        private GameParticipant CreatePendingParticipant()
         {
             return GameParticipant.RequestToJoin(
-                gameId: Guid.NewGuid(),
+                gameId: _game.Id,
                 playerProfileId: Guid.NewGuid(),
                 joinedAt: GameStartsAt.AddDays(-3),
                 offlinePaymentStatus: GameParticipantOfflinePaymentStatus.Pending);
         }
 
-        private static GameParticipant CreateApprovedParticipant(
+        private GameParticipant CreateApprovedParticipant(
             GameParticipantOfflinePaymentStatus offlinePaymentStatus =
                 GameParticipantOfflinePaymentStatus.Pending)
         {
             return GameParticipant.JoinOpenGame(
-                gameId: Guid.NewGuid(),
+                gameId: _game.Id,
                 playerProfileId: Guid.NewGuid(),
                 joinedAt: GameStartsAt.AddDays(-3),
                 offlinePaymentStatus: offlinePaymentStatus);

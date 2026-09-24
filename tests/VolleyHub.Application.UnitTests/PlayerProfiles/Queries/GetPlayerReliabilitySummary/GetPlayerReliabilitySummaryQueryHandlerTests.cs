@@ -2,8 +2,8 @@ using FluentAssertions;
 using Moq;
 using VolleyHub.Application.Common.Exceptions;
 using VolleyHub.Application.Common.Interfaces;
+using VolleyHub.Application.PlayerProfiles.Dtos;
 using VolleyHub.Application.PlayerProfiles.Queries.GetPlayerReliabilitySummary;
-using VolleyHub.Domain.Games;
 using VolleyHub.Domain.PlayerProfiles;
 
 namespace VolleyHub.Application.UnitTests.PlayerProfiles.Queries.GetPlayerReliabilitySummary
@@ -11,182 +11,57 @@ namespace VolleyHub.Application.UnitTests.PlayerProfiles.Queries.GetPlayerReliab
     public sealed class GetPlayerReliabilitySummaryQueryHandlerTests
     {
         [Fact]
-        public async Task Handle_ShouldReturnReliabilitySummary_WhenPlayerHasMarkedGames()
+        public async Task Handle_ShouldReturnFactualSummaryAndForwardCancellationToken()
         {
-            var playerProfile = CreatePlayerProfile();
+            var player = PlayerProfile.Create(Guid.NewGuid(), "Player", PlayerSkillLevel.Intermediate, null, null);
+            var summary = new PlayerReliabilitySummaryDto(player.Id, 3, 1, 2, 4, 5);
+            using var cancellation = new CancellationTokenSource();
+            var profiles = new Mock<IPlayerProfileRepository>();
+            var participants = new Mock<IGameParticipantRepository>();
+            profiles.Setup(r => r.GetByIdAsync(player.Id, cancellation.Token)).ReturnsAsync(player);
+            participants.Setup(r => r.GetReliabilitySummaryAsync(player.Id, cancellation.Token)).ReturnsAsync(summary);
+            var handler = new GetPlayerReliabilitySummaryQueryHandler(profiles.Object, participants.Object);
 
-            var participants = new List<GameParticipant>
-            {
-                CreateParticipantWithAttendance(playerProfile.Id, GameParticipantAttendanceStatus.Present),
-                CreateParticipantWithAttendance(playerProfile.Id, GameParticipantAttendanceStatus.Present),
-                CreateParticipantWithAttendance(playerProfile.Id, GameParticipantAttendanceStatus.Present),
-                CreateParticipantWithAttendance(playerProfile.Id, GameParticipantAttendanceStatus.Absent),
-                CreateParticipantWithoutMarkedAttendance(playerProfile.Id)
-            };
+            var result = await handler.Handle(new GetPlayerReliabilitySummaryQuery(player.Id), cancellation.Token);
 
-            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
-            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
-
-            playerProfileRepositoryMock
-                .Setup(repository => repository.GetByIdAsync(
-                    playerProfile.Id,
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(playerProfile);
-
-            gameParticipantRepositoryMock
-                .Setup(repository => repository.GetByPlayerProfileIdAsync(
-                    playerProfile.Id,
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(participants);
-
-            var handler = new GetPlayerReliabilitySummaryQueryHandler(
-                playerProfileRepositoryMock.Object,
-                gameParticipantRepositoryMock.Object);
-
-            var query = new GetPlayerReliabilitySummaryQuery(playerProfile.Id);
-
-            var result = await handler.Handle(query, CancellationToken.None);
-
-            result.PlayerProfileId.Should().Be(playerProfile.Id);
-            result.AttendedGamesCount.Should().Be(3);
-            result.NoShowCount.Should().Be(1);
-            result.LateCancellationCount.Should().Be(0);
-            result.TotalMarkedGamesCount.Should().Be(4);
-            result.AttendanceRate.Should().Be(75);
+            result.Should().BeSameAs(summary);
+            participants.Verify(r => r.GetReliabilitySummaryAsync(player.Id, cancellation.Token), Times.Once);
         }
 
-        [Fact]
-        public async Task Handle_ShouldReturnZeroSummary_WhenPlayerHasNoMarkedGames()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Handle_ShouldRejectMissingOrDeletedProfileWithoutReadingReliability(bool deleted)
         {
-            var playerProfile = CreatePlayerProfile();
+            var player = PlayerProfile.Create(Guid.NewGuid(), "Player", PlayerSkillLevel.Intermediate, null, null);
+            if (deleted) player.Delete();
+            var profiles = new Mock<IPlayerProfileRepository>();
+            var participants = new Mock<IGameParticipantRepository>();
+            profiles.Setup(r => r.GetByIdAsync(player.Id, It.IsAny<CancellationToken>())).ReturnsAsync(deleted ? player : null);
+            var handler = new GetPlayerReliabilitySummaryQueryHandler(profiles.Object, participants.Object);
 
-            var participants = new List<GameParticipant>
-            {
-                CreateParticipantWithoutMarkedAttendance(playerProfile.Id)
-            };
-
-            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
-            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
-
-            playerProfileRepositoryMock
-                .Setup(repository => repository.GetByIdAsync(
-                    playerProfile.Id,
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(playerProfile);
-
-            gameParticipantRepositoryMock
-                .Setup(repository => repository.GetByPlayerProfileIdAsync(
-                    playerProfile.Id,
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(participants);
-
-            var handler = new GetPlayerReliabilitySummaryQueryHandler(
-                playerProfileRepositoryMock.Object,
-                gameParticipantRepositoryMock.Object);
-
-            var query = new GetPlayerReliabilitySummaryQuery(playerProfile.Id);
-
-            var result = await handler.Handle(query, CancellationToken.None);
-
-            result.PlayerProfileId.Should().Be(playerProfile.Id);
-            result.AttendedGamesCount.Should().Be(0);
-            result.NoShowCount.Should().Be(0);
-            result.LateCancellationCount.Should().Be(0);
-            result.TotalMarkedGamesCount.Should().Be(0);
-            result.AttendanceRate.Should().Be(0);
-        }
-
-        [Fact]
-        public async Task Handle_ShouldThrowNotFoundException_WhenPlayerProfileDoesNotExist()
-        {
-            var playerProfileId = Guid.NewGuid();
-
-            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
-            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
-
-            playerProfileRepositoryMock
-                .Setup(repository => repository.GetByIdAsync(
-                    playerProfileId,
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync((PlayerProfile?)null);
-
-            var handler = new GetPlayerReliabilitySummaryQueryHandler(
-                playerProfileRepositoryMock.Object,
-                gameParticipantRepositoryMock.Object);
-
-            var query = new GetPlayerReliabilitySummaryQuery(playerProfileId);
-
-            Func<Task> act = async () => await handler.Handle(query, CancellationToken.None);
+            var act = () => handler.Handle(new GetPlayerReliabilitySummaryQuery(player.Id), CancellationToken.None);
 
             await act.Should().ThrowAsync<NotFoundException>();
-
-            gameParticipantRepositoryMock.Verify(
-                repository => repository.GetByPlayerProfileIdAsync(
-                    It.IsAny<Guid>(),
-                    It.IsAny<CancellationToken>()),
-                Times.Never);
+            participants.Verify(r => r.GetReliabilitySummaryAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
-        [Fact]
-        public async Task Handle_ShouldThrowNotFoundException_WhenPlayerProfileIsDeleted()
+        [Theory]
+        [InlineData(0, 0, 0)]
+        [InlineData(3, 1, 75)]
+        [InlineData(1, 2, 33.33)]
+        [InlineData(2, 1, 66.67)]
+        [InlineData(1, 0, 100)]
+        [InlineData(0, 2, 0)]
+        public void Summary_ShouldUseOnlyMarkedAttendanceForRate(int attended, int noShows, decimal expectedRate)
         {
-            var playerProfile = CreatePlayerProfile();
-            playerProfile.Delete();
+            var summary = new PlayerReliabilitySummaryDto(Guid.NewGuid(), attended, noShows, 7, 8, 9);
 
-            var playerProfileRepositoryMock = new Mock<IPlayerProfileRepository>();
-            var gameParticipantRepositoryMock = new Mock<IGameParticipantRepository>();
-
-            playerProfileRepositoryMock
-                .Setup(repository => repository.GetByIdAsync(
-                    playerProfile.Id,
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(playerProfile);
-
-            var handler = new GetPlayerReliabilitySummaryQueryHandler(
-                playerProfileRepositoryMock.Object,
-                gameParticipantRepositoryMock.Object);
-
-            var query = new GetPlayerReliabilitySummaryQuery(playerProfile.Id);
-
-            Func<Task> act = async () => await handler.Handle(query, CancellationToken.None);
-
-            await act.Should().ThrowAsync<NotFoundException>();
-
-            gameParticipantRepositoryMock.Verify(
-                repository => repository.GetByPlayerProfileIdAsync(
-                    It.IsAny<Guid>(),
-                    It.IsAny<CancellationToken>()),
-                Times.Never);
-        }
-
-        private static PlayerProfile CreatePlayerProfile()
-        {
-            return PlayerProfile.Create(
-                userId: Guid.NewGuid(),
-                displayName: "John Player",
-                skillLevel: PlayerSkillLevel.Intermediate,
-                city: "Amsterdam",
-                bio: "I like volleyball.");
-        }
-
-        private static GameParticipant CreateParticipantWithAttendance(
-            Guid playerProfileId,
-            GameParticipantAttendanceStatus attendanceStatus)
-        {
-            var participant = CreateParticipantWithoutMarkedAttendance(playerProfileId);
-
-            participant.MarkAttendance(attendanceStatus);
-
-            return participant;
-        }
-
-        private static GameParticipant CreateParticipantWithoutMarkedAttendance(Guid playerProfileId)
-        {
-            return GameParticipant.JoinOpenGame(
-                gameId: Guid.NewGuid(),
-                playerProfileId: playerProfileId,
-                joinedAt: DateTimeOffset.UtcNow.AddDays(-1),
-                offlinePaymentStatus: GameParticipantOfflinePaymentStatus.Pending);
+            summary.TotalMarkedGamesCount.Should().Be(attended + noShows);
+            summary.AttendanceRate.Should().Be(expectedRate);
+            summary.LateCancellationCount.Should().Be(7);
+            summary.OnTimeCancellationCount.Should().Be(8);
+            summary.UnmarkedGamesCount.Should().Be(9);
         }
     }
 }

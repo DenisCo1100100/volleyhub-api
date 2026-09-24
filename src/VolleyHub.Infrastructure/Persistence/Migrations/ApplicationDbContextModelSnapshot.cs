@@ -251,6 +251,7 @@ namespace VolleyHub.Infrastructure.Persistence.Migrations
                         .HasColumnName("approved_at");
 
                     b.Property<string>("AttendanceStatus")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")

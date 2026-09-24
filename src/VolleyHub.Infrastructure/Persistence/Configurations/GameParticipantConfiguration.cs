@@ -46,6 +46,7 @@ namespace VolleyHub.Infrastructure.Persistence.Configurations
 
             builder.Property(participant => participant.AttendanceStatus)
                 .HasColumnName("attendance_status")
+                .IsConcurrencyToken()
                 .HasConversion<string>()
                 .HasMaxLength(50)
                 .IsRequired();

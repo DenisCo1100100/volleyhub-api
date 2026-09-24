@@ -95,7 +95,7 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
                     {
                         participant.UpdateOfflinePaymentStatus(game, GameParticipantOfflinePaymentStatus.Paid);
                         game.Complete();
-                        participant.MarkAttendance(GameParticipantAttendanceStatus.Present);
+                        participant.MarkAttendance(game, GameParticipantAttendanceStatus.Present);
                     }
                     context.AddRange(game, participant);
                     expected.Add(participant);
@@ -153,7 +153,6 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
                 {
                     var participant = CreateParticipant(game, i == 0 ? organizer.Profile.Id : Guid.NewGuid(), GameParticipantJoinStatus.Approved);
                     if (i == 0) participant.UpdateOfflinePaymentStatus(game, GameParticipantOfflinePaymentStatus.Paid);
-                    if (i < 2) participant.MarkAttendance(i == 0 ? GameParticipantAttendanceStatus.Present : GameParticipantAttendanceStatus.Absent);
                     context.GameParticipants.Add(participant);
                 }
                 foreach (var status in new[] { GameParticipantJoinStatus.PendingApproval, GameParticipantJoinStatus.Waitlisted,
@@ -162,6 +161,9 @@ namespace VolleyHub.Api.IntegrationTests.Mvp
                     context.GameParticipants.Add(CreateParticipant(game, Guid.NewGuid(), status));
                 }
                 game.Complete();
+                var approved = context.GameParticipants.Local.Where(p => p.GameId == game.Id && p.JoinStatus == GameParticipantJoinStatus.Approved).ToArray();
+                approved[0].MarkAttendance(game, GameParticipantAttendanceStatus.Present);
+                approved[1].MarkAttendance(game, GameParticipantAttendanceStatus.Absent);
                 context.Games.Add(CreateGame(outsider.Profile.Id, court.Id, game.StartsAt));
             });
 

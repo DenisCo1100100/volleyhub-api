@@ -393,14 +393,11 @@ Current attendance states include:
 * `Present`;
 * `Absent`.
 
-The current backend already distinguishes these states, and organizer attendance marking is part of the completed core flow.
+Only approved participants in completed games can be marked `Present` or `Absent`; `Absent` represents an explicitly recorded no-show. The organizer may correct either mark to the other or repeat it, but cannot reset it to `NotMarked`. Unmarked attendance is never inferred as absence.
 
-Later, the attendance model may become more detailed with concepts such as:
+Cancellation remains a separate participation fact: `Cancelled` with a saved `OnTime` or `Late` classification. The global threshold is 24 hours before the game starts. Cancelled participants cannot receive attendance marks, and organizer removal is separate from player cancellation.
 
-* cancelled sufficiently in advance;
-* late cancellation;
-* no-show;
-* disputed attendance mark.
+Reliability summaries use completed games only and expose attended, no-show, on-time cancellation, late cancellation, and unmarked attendance counts. Cancelled or uncompleted games do not contribute. Attendance percentage uses only present and absent marks; cancellations and unmarked attendance do not change its denominator. Missing historical cancellation facts are not guessed. See [Participant cancellation, attendance, and reliability](game-participant-cancellation-lifecycle.md) for exact rules, corrections, compatibility, and API fields.
 
 Reliability should be based on factual participation history.
 
@@ -408,20 +405,14 @@ The goal is not public shaming.
 
 The goal is to help organizers protect limited game capacity from repeated unreliable behavior.
 
-Possible reliability features:
+Possible later reliability features:
 
-* attendance history;
-* attended game count;
-* absence count;
-* attendance percentage;
-* cancellation history;
-* late cancellation history;
 * organizer visibility into reliability before approval;
 * reliability filters;
 * temporary restrictions after repeated no-shows;
 * player disputes for incorrect marks.
 
-Reliability should become more sophisticated only when the underlying attendance and cancellation rules are reliable.
+Reliability remains descriptive. Public ratings, arbitrary weighted scores, automatic penalties, and dispute workflows are outside the current implementation.
 
 ## 12. Organizer Operations
 
