@@ -2,7 +2,6 @@ using MediatR;
 using VolleyHub.Application.Common.Exceptions;
 using VolleyHub.Application.Common.Interfaces;
 using VolleyHub.Application.PlayerProfiles.Dtos;
-using VolleyHub.Domain.Games;
 using VolleyHub.Domain.PlayerProfiles;
 
 namespace VolleyHub.Application.PlayerProfiles.Queries.GetPlayerReliabilitySummary
@@ -34,30 +33,9 @@ namespace VolleyHub.Application.PlayerProfiles.Queries.GetPlayerReliabilitySumma
                 throw new NotFoundException(nameof(PlayerProfile), request.PlayerProfileId);
             }
 
-            var participants = await _gameParticipantRepository.GetByPlayerProfileIdAsync(
+            return await _gameParticipantRepository.GetReliabilitySummaryAsync(
                 request.PlayerProfileId,
                 cancellationToken);
-
-            var attendedGamesCount = participants.Count(
-                participant => participant.AttendanceStatus is GameParticipantAttendanceStatus.Present);
-
-            var noShowCount = participants.Count(
-                participant => participant.AttendanceStatus is GameParticipantAttendanceStatus.Absent);
-
-            var lateCancellationCount = 0;
-            var totalMarkedGamesCount = attendedGamesCount + noShowCount;
-
-            var attendanceRate = totalMarkedGamesCount == 0
-                ? 0
-                : Math.Round((decimal)attendedGamesCount / totalMarkedGamesCount * 100, 2);
-
-            return new PlayerReliabilitySummaryDto(
-                request.PlayerProfileId,
-                attendedGamesCount,
-                noShowCount,
-                lateCancellationCount,
-                totalMarkedGamesCount,
-                attendanceRate);
         }
     }
 }

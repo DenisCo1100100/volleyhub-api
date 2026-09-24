@@ -165,6 +165,7 @@ namespace VolleyHub.Domain.Games
 
             ValidateGameStartsAt(gameStartsAt);
             ValidateParticipationEventTime(cancelledAt, nameof(cancelledAt));
+            EnsureAttendanceIsNotMarked();
 
             if (cancelledAt >= gameStartsAt)
             {
@@ -193,6 +194,7 @@ namespace VolleyHub.Domain.Games
 
             ValidateGameStartsAt(gameStartsAt);
             ValidateParticipationEventTime(removedAt, nameof(removedAt));
+            EnsureAttendanceIsNotMarked();
 
             if (removedAt >= gameStartsAt)
             {
@@ -203,8 +205,15 @@ namespace VolleyHub.Domain.Games
             JoinStatus = GameParticipantJoinStatus.Removed;
         }
 
-        public void MarkAttendance(GameParticipantAttendanceStatus attendanceStatus)
+        public void MarkAttendance(Game game, GameParticipantAttendanceStatus attendanceStatus)
         {
+            EnsureBelongsToGame(game);
+
+            if (game.Status is not GameStatus.Completed)
+            {
+                throw new BusinessRuleException("Attendance can be marked only after the game is completed.");
+            }
+
             if (JoinStatus is not GameParticipantJoinStatus.Approved)
             {
                 throw new BusinessRuleException("Only approved participants can have attendance marked.");
@@ -213,6 +222,14 @@ namespace VolleyHub.Domain.Games
             ValidateAttendanceStatus(attendanceStatus);
 
             AttendanceStatus = attendanceStatus;
+        }
+
+        private void EnsureAttendanceIsNotMarked()
+        {
+            if (AttendanceStatus is not GameParticipantAttendanceStatus.NotMarked)
+            {
+                throw new BusinessRuleException("Participation cannot end after attendance has been recorded.");
+            }
         }
 
         public void UpdateOfflinePaymentStatus(Game game, GameParticipantOfflinePaymentStatus offlinePaymentStatus)

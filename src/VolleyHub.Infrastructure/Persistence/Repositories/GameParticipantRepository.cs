@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using VolleyHub.Application.Common.Interfaces;
+using VolleyHub.Application.PlayerProfiles.Dtos;
 using VolleyHub.Domain.Games;
 
 namespace VolleyHub.Infrastructure.Persistence.Repositories
@@ -44,15 +45,30 @@ namespace VolleyHub.Infrastructure.Persistence.Repositories
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<IReadOnlyList<GameParticipant>> GetByPlayerProfileIdAsync(
-            Guid playerProfileId,
-            CancellationToken cancellationToken)
+        public async Task<PlayerReliabilitySummaryDto> GetReliabilitySummaryAsync(Guid playerProfileId, CancellationToken cancellationToken)
         {
-            return await _context.GameParticipants
-                .AsNoTracking()
-                .Where(participant => participant.PlayerProfileId == playerProfileId)
-                .OrderByDescending(participant => participant.JoinedAt)
-                .ToListAsync(cancellationToken);
+            return await BuildReliabilitySummaryQuery(playerProfileId).SingleOrDefaultAsync(cancellationToken)
+                ?? new PlayerReliabilitySummaryDto(playerProfileId, 0, 0, 0, 0, 0);
+        }
+
+        internal IQueryable<PlayerReliabilitySummaryDto> BuildReliabilitySummaryQuery(Guid playerProfileId)
+        {
+            // Completion is explicit; elapsed time alone never establishes attendance or a no-show.
+            var participants = from participant in _context.GameParticipants.AsNoTracking()
+                               join game in _context.Games.AsNoTracking() on participant.GameId equals game.Id
+                               where participant.PlayerProfileId == playerProfileId && game.Status == GameStatus.Completed
+                               select participant;
+
+            return participants.GroupBy(participant => participant.PlayerProfileId)
+                .Select(group => new PlayerReliabilitySummaryDto(
+                    group.Key,
+                    group.Count(p => p.JoinStatus == GameParticipantJoinStatus.Approved && p.AttendanceStatus == GameParticipantAttendanceStatus.Present),
+                    group.Count(p => p.JoinStatus == GameParticipantJoinStatus.Approved && p.AttendanceStatus == GameParticipantAttendanceStatus.Absent),
+                    group.Count(p => p.JoinStatus == GameParticipantJoinStatus.Cancelled && p.ApprovedAt != null && p.CancelledAt != null
+                        && p.CancellationType == GameParticipantCancellationType.Late),
+                    group.Count(p => p.JoinStatus == GameParticipantJoinStatus.Cancelled && p.ApprovedAt != null && p.CancelledAt != null
+                        && p.CancellationType == GameParticipantCancellationType.OnTime),
+                    group.Count(p => p.JoinStatus == GameParticipantJoinStatus.Approved && p.AttendanceStatus == GameParticipantAttendanceStatus.NotMarked)));
         }
 
         public async Task AddAsync(

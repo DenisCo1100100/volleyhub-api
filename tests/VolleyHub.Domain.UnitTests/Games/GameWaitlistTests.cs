@@ -160,7 +160,7 @@ namespace VolleyHub.Domain.UnitTests.Games
             var game = CreateFullGame();
             var participant = GameParticipant.JoinWaitlist(game, Guid.NewGuid(), Now, 2);
             var approve = () => participant.Approve(Now);
-            var attendance = () => participant.MarkAttendance(GameParticipantAttendanceStatus.Present);
+            var attendance = () => participant.MarkAttendance(game, GameParticipantAttendanceStatus.Present);
             var cancel = () => participant.CancelParticipation(Now, game.StartsAt);
 
             approve.Should().Throw<BusinessRuleException>();

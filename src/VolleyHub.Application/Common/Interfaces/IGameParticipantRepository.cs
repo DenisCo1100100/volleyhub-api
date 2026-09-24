@@ -1,5 +1,7 @@
 ﻿using VolleyHub.Domain.Games;
 
+using VolleyHub.Application.PlayerProfiles.Dtos;
+
 namespace VolleyHub.Application.Common.Interfaces
 {
     public interface IGameParticipantRepository
@@ -17,9 +19,7 @@ namespace VolleyHub.Application.Common.Interfaces
             Guid gameId,
             CancellationToken cancellationToken);
 
-        Task<IReadOnlyList<GameParticipant>> GetByPlayerProfileIdAsync(
-            Guid playerProfileId,
-            CancellationToken cancellationToken);
+        Task<PlayerReliabilitySummaryDto> GetReliabilitySummaryAsync(Guid playerProfileId, CancellationToken cancellationToken);
 
         Task AddAsync(
             GameParticipant participant,
