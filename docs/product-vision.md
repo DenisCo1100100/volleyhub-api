@@ -732,6 +732,21 @@ A confirmed venue reservation may eventually create or connect to a game automat
 
 ## 16. Product Roadmap
 
+### First User-Facing Release Readiness
+
+Russian is a required release language and must be fully supported across all user-facing flows before the first user-facing release. Localization is part of release readiness, not a post-release feature.
+
+Localization requirements:
+
+* The frontend must use a localization architecture with user-facing text in locale resources, rather than directly replacing English strings with Russian text.
+* The architecture must remain capable of supporting multiple locales. Existing English resources must remain available during migration as a secondary/fallback language; fallback support does not replace complete Russian coverage for release.
+* Domain values, API contracts, API enum names, and persisted values must remain stable and language-neutral. User-facing enum labels are translated only at the presentation boundary using frontend localization resources.
+* Dates, times, numbers, and percentages must be formatted using the active locale.
+* Business rules and behavior must remain language-neutral and must never vary by UI language. Localization changes presentation only.
+* Frontend validation and error handling must not depend on comparing arbitrary English server strings, including ProblemDetails titles or details. Use stable machine-readable error information where available and localized fallback messages otherwise.
+
+Release preparation must integrate and verify Russian localization before full UI/UX visual polish. Layouts and user flows must then be reviewed with real Russian text, including its effect on text length and spacing, before the public release readiness review.
+
 ### MVP 1A — Core Game Foundation
 
 Status: completed foundation.
